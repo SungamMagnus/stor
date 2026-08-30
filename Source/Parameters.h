@@ -42,8 +42,14 @@ extern const juce::String opWave[numOps];   // [0] carrier, [1] modulator
 extern const juce::String opRatio[numOps];
 extern const juce::String index;            // modulation index, in radians
 extern const juce::String indexEnv;         // how much of it the envelope owns
+extern const juce::String xfm;              // op 1 back into op 2, closing the loop
 extern const juce::String fmA, fmD, fmS, fmR;
 extern const juce::String fmLevel;
+
+/* ── Modulation envelope ─────────────────────────────────────────────
+ * One envelope, shared, driving every depth on the panel. It is not either
+ * engine's amp envelope: those say how loud, this says how far. */
+extern const juce::String modA, modD, modS, modR;
 
 /* ── Tape ────────────────────────────────────────────────────────────── */
 extern const juce::String drive;

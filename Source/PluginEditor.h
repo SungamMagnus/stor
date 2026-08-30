@@ -74,6 +74,7 @@ private:
     void paintPitch (juce::Graphics&);
     void paintSubtractive (juce::Graphics&);
     void paintFm (juce::Graphics&);
+    void paintMod (juce::Graphics&);
     void paintChain (juce::Graphics&);
 
     WhoompProcessor& proc;

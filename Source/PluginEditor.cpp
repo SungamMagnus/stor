@@ -16,9 +16,10 @@ enum Kn
     kFold, kFoldEnv, kCutoff, kReso, kFiltEnv,
     kSubA, kSubD, kSubS, kSubR, kSubLevel,
 
-    kRatio1, kRatio2, kIndex, kIndexEnv,
+    kRatio1, kRatio2, kIndex, kIndexEnv, kXfm,
     kFmA, kFmD, kFmS, kFmR, kFmLevel,
 
+    kModA, kModD, kModS, kModR,
     kDrive, kHiss, kCabMix,
     kRoomSize, kRoomDamp, kRoomMix,
     kLoCut,
@@ -34,9 +35,10 @@ const juce::String* kKnobId[kNumKnobs] = {
     &pid::fold, &pid::foldEnv, &pid::cutoff, &pid::reso, &pid::filtEnv,
     &pid::subA, &pid::subD, &pid::subS, &pid::subR, &pid::subLevel,
 
-    &pid::opRatio[0], &pid::opRatio[1], &pid::index, &pid::indexEnv,
+    &pid::opRatio[0], &pid::opRatio[1], &pid::index, &pid::indexEnv, &pid::xfm,
     &pid::fmA, &pid::fmD, &pid::fmS, &pid::fmR, &pid::fmLevel,
 
+    &pid::modA, &pid::modD, &pid::modS, &pid::modR,
     &pid::drive, &pid::hiss, &pid::cabMix,
     &pid::roomSize, &pid::roomDamp, &pid::roomMix,
     &pid::loCut,
@@ -63,14 +65,17 @@ const Cell kPitch[] = {
 };
 
 const Cell kSub[] = {
+    /* Fold depth sits on the oscillator rail, after the saw tap and before the
+       fold tap — which is the whole point: it shapes one column, not the mix. */
+    { kFold, subFoldX, subFanY, rMed, "FOLD DEPTH", false, false },
+
     { kLvlSine, voiceCol (0), subMixRow, 18.0f, "SINE", false, false },
     { kLvlTri,  voiceCol (1), subMixRow, 18.0f, "TRI",  false, false },
     { kLvlSaw,  voiceCol (2), subMixRow, 18.0f, "SAW",  false, false },
     { kLvlFold, voiceCol (3), subMixRow, 18.0f, "FOLD", false, false },
 
-    { kFold,   subFoldX,   subShapeRow, rBig, "FOLD DEPTH", false, false },
-    { kCutoff, subCutoffX, subShapeRow, rBig, "CUTOFF",     false, false },
-    { kReso,   subResoX,   subShapeRow, rMix, "RESO",       false, false },
+    { kCutoff, subCutoffX, subShapeRow, rBig, "CUTOFF", false, false },
+    { kReso,   subResoX,   subShapeRow, rMix, "RESO",   false, false },
 
     { kSubA, voiceCol (0), envRow, rSml, "ATTACK",  false, false },
     { kSubD, voiceCol (1), envRow, rSml, "DECAY",   false, false },
@@ -82,11 +87,20 @@ const Cell kFm[] = {
     { kRatio2, fmRatioX, fmRow2, rMix, "RATIO", false, false },
     { kRatio1, fmRatioX, fmRow1, rMix, "RATIO", false, false },
     { kIndex,  fmIndexX, fmRow2, rBig, "INDEX", false, false },
+    { kXfm,    fmCrossX, fmCrossY, rMed, "CROSS FM", false, false },
 
     { kFmA, fmCol (0), envRow, rSml, "ATTACK",  false, false },
     { kFmD, fmCol (1), envRow, rSml, "DECAY",   false, false },
     { kFmS, fmCol (2), envRow, rSml, "SUSTAIN", false, false },
     { kFmR, fmCol (3), envRow, rSml, "RELEASE", false, false },
+};
+
+/* The one modulation source, in its own block outside both engines. */
+const Cell kMod[] = {
+    { kModA, modCol (0), modRow, rSml, "ATTACK",  false, false },
+    { kModD, modCol (1), modRow, rSml, "DECAY",   false, false },
+    { kModS, modCol (2), modRow, rSml, "SUSTAIN", false, false },
+    { kModR, modCol (3), modRow, rSml, "RELEASE", false, false },
 };
 
 const Cell kChain[] = {
@@ -115,13 +129,14 @@ const Cell kChain[] = {
     { kOutLevel, 890.0f, fxRow2, 24.0f, "OUTPUT", false, true },
 };
 
-/* The three trims: a modulation depth hanging off the control it moves. Each
-   rides its own engine's amp envelope — there is no other modulator here,
-   which is what lets a trim be a depth and nothing else. */
+/* The three trims. Each is a depth on the knob it hangs off, and all three
+   ride the one modulation envelope — which is what lets a trim be a depth and
+   nothing else. All violet, captioned MOD ENV, and answered by the single
+   violet block on the panel. */
 struct Trim { int knob; float cx, cy, r; bool bipolar; };
 
 const Trim kTrims[] = {
-    { kFoldEnv,  subFoldX,   subShapeRow, rBig, true  },
+    { kFoldEnv,  subFoldX,   subFanY,     rMed, true  },
     { kFiltEnv,  subCutoffX, subShapeRow, rBig, true  },
     { kIndexEnv, fmIndexX,   fmRow2,      rBig, false },
 };
@@ -167,12 +182,22 @@ void WhoompEditor::buildControls()
     for (const auto& c : kPitch) place (c.knob, box (c.cx, c.cy, c.r));
     for (const auto& c : kSub)   place (c.knob, box (c.cx, c.cy, c.r));
     for (const auto& c : kFm)    place (c.knob, box (c.cx, c.cy, c.r));
+    for (const auto& c : kMod)   place (c.knob, box (c.cx, c.cy, c.r));
     for (const auto& c : kChain) place (c.knob, box (c.cx, c.cy, c.r));
 
     for (const auto& t : kTrims)
     {
         const auto at = trimAt (t.cx, t.cy, t.r);
         place (t.knob, box (at.x, at.y, rTrim), 90.0f);
+    }
+
+    /* Every enum value has to have come through place() above — a knob left
+       at its default-constructed null param is a fast, silent crash the
+       first time the panel tries to read it, rather than a build error. */
+    for (const auto& kn : knobs)
+    {
+        juce::ignoreUnused (kn);
+        jassert (kn.param != nullptr);
     }
 
     auto addRadio = [this] (const juce::String& id, int index, juce::Rectangle<float> hit)
@@ -241,7 +266,8 @@ juce::String WhoompEditor::readout (int i) const
         case kBend:   return semitoneReadout (v);
         case kFall:
         case kSubA: case kSubD: case kSubR:
-        case kFmA:  case kFmD:  case kFmR:   return msReadout (v);
+        case kFmA:  case kFmD:  case kFmR:
+        case kModA: case kModD: case kModR:  return msReadout (v);
 
         case kCutoff:  return hzReadout (v);
         case kFiltEnv: return octaveReadout (filterOctaves (v));
@@ -249,7 +275,8 @@ juce::String WhoompEditor::readout (int i) const
 
         case kRatio1:
         case kRatio2: return ratioReadout (v);
-        case kIndex:  return indexReadout (v);
+        case kIndex:
+        case kXfm:    return indexReadout (v);
 
         case kSubLevel:
         case kFmLevel: return levelReadout (v);
@@ -383,10 +410,11 @@ void WhoompEditor::paint (juce::Graphics& g)
     paintPitch (g);
     paintSubtractive (g);
     paintFm (g);
+    paintMod (g);
     paintChain (g);
 
-    tracked (g, "WHOOMP", { 990.0f, 940.0f, 220.0f, 22.0f }, 16.0f, ink (0.55f), 5.0f, false);
-    text (g, "KICK SYNTHESISER", { 990.0f, 964.0f, 220.0f, 12.0f }, 7.5f, ink (0.38f));
+    tracked (g, "WHOOMP", { 990.0f, 1058.0f, 220.0f, 22.0f }, 16.0f, ink (0.55f), 5.0f, false);
+    text (g, "KICK SYNTHESISER", { 990.0f, 1082.0f, 220.0f, 12.0f }, 7.5f, ink (0.38f));
 }
 
 void WhoompEditor::paintPitch (juce::Graphics& g)
@@ -411,40 +439,50 @@ void WhoompEditor::paintPitch (juce::Graphics& g)
 
     /* Where the fall has got to, which is the one thing about this instrument
        you cannot read off a knob. */
-    text (g, "PITCH ENV", { 600.0f, 154.0f, 90.0f, 12.0f }, 8.0f, ink (0.62f),
-          juce::Justification::left);
+    text (g, "PITCH ENV", { 600.0f, 148.0f, 90.0f, 12.0f }, 8.0f, ink (0.62f),
+          juce::Justification::left, true, true);
     meter (g, fallMeterRect(), state.pitchEnv.load (std::memory_order_relaxed),
            hue::ink.withAlpha (0.7f));
 
-    text (g, "NOTE", { 1000.0f, 154.0f, 50.0f, 12.0f }, 8.0f, ink (0.62f),
-          juce::Justification::left);
-    text (g, noteReadout(), { 1050.0f, 153.0f, 180.0f, 13.0f }, 9.5f, ink (0.78f),
-          juce::Justification::left);
+    text (g, "NOTE", { 1000.0f, 148.0f, 50.0f, 12.0f }, 8.0f, ink (0.62f),
+          juce::Justification::left, true, true);
+    text (g, noteReadout(), { 1050.0f, 147.0f, 180.0f, 13.0f }, 9.5f, ink (0.78f),
+          juce::Justification::left, true, true);
 }
 
 void WhoompEditor::paintSubtractive (juce::Graphics& g)
 {
     frame (g, subFrame(), hue::coral, "SUBTRACTIVE");
 
-    /* One oscillator fanned to four shapes and summed. Drawn as a rail in and
-       a rail out, because four free oscillators is what this is not. */
+    /* One oscillator on a rail, tapped four times. Everything on the rail to
+       the left of a tap reaches that tap; FOLD DEPTH sits between the saw tap
+       and the fold tap, so it is in the fold column's path and nothing else's.
+       That is the whole reason it is drawn here and not after the sum. */
     wire (g, { { pitchLegSubX, frameTop }, { pitchLegSubX, subFanY } }, hue::coral, 0.45f);
-    wire (g, { { voiceCol (0), subFanY }, { voiceCol (3), subFanY } }, hue::coral, 0.45f);
-    wire (g, { { voiceCol (0), subSumY }, { voiceCol (3), subSumY } }, hue::coral, 0.45f);
+    wire (g, { { voiceCol (0), subFanY }, { subFoldX - rMed, subFanY } }, hue::coral, 0.45f);
+    wire (g, { { subFoldX + rMed, subFanY }, { voiceCol (3), subFanY } }, hue::coral, 0.45f);
 
     for (int i = 0; i < 4; ++i)
     {
         wire (g, { { voiceCol (i), subFanY }, { voiceCol (i), subMixRow - 18.0f } },
               hue::coral, 0.45f);
+        node (g, voiceCol (i), subFanY, hue::coral, 0.5f, 2.4f);
+
         wire (g, { { voiceCol (i), subMixRow + 18.0f }, { voiceCol (i), subSumY } },
               hue::coral, 0.45f);
         node (g, voiceCol (i), subSumY, hue::coral, 0.5f, 2.4f);
     }
 
-    /* Sum, then fold, then the filter, then straight out of the bottom. */
-    wire (g, { { subFoldX, subSumY }, { subFoldX, subShapeRow - rBig } }, hue::coral, 0.45f);
-    wire (g, { { subFoldX + rBig, subShapeRow }, { subResoX, subShapeRow } }, hue::coral, 0.45f);
-    wire (g, { { subOutX, subShapeRow + rMix }, { subOutX, frameBot } }, hue::coral, 0.45f);
+    /* The four levels sum, and the sum leaves from the left end of the bus so
+       the run down into the filter crosses nothing on its way. */
+    wire (g, { { subSumLeftX, subSumY }, { voiceCol (3), subSumY } }, hue::coral, 0.45f);
+    wire (g, { { subSumLeftX, subSumY }, { subSumLeftX, subShapeRow },
+               { subCutoffX - rBig, subShapeRow } }, hue::coral, 0.45f);
+
+    wire (g, { { subCutoffX + rBig, subShapeRow }, { subResoX - rMix, subShapeRow } },
+          hue::coral, 0.45f);
+    wire (g, { { subResoX + rMix, subShapeRow }, { subOutX, subShapeRow },
+               { subOutX, frameBot } }, hue::coral, 0.45f);
 
     for (const auto& c : kSub)
         knobCell (g, c.cx, c.cy, c.r, norm (c.knob), hue::coral,
@@ -452,25 +490,26 @@ void WhoompEditor::paintSubtractive (juce::Graphics& g)
 
     for (const auto& t : kTrims)
         if (t.knob == kFoldEnv || t.knob == kFiltEnv)
-            trim (g, t.cx, t.cy, t.r, norm (t.knob), t.bipolar);
+            trim (g, t.cx, t.cy, t.r, norm (t.knob), hue::violet, t.bipolar, "MOD ENV");
 
     /* The envelope, on a dashed leg round the outside of the row: it is what
-       gates the path, not a stage standing in it. */
+       gates the path, not a stage standing in it. What the violet trims above
+       are riding is the other envelope, in its own block below. */
     wire (g, { { voiceCol (3) + rSml + 8.0f, envRow }, { 560.0f, envRow },
                { 560.0f, envLegY }, { subOutX, envLegY } }, hue::coral, 0.40f, 1.1f, 4.0f);
     node (g, subOutX, envLegY, hue::coral, 0.5f, 2.4f);
-    text (g, "AMP ENVELOPE", { voiceCol (0) - 34.0f, envLegY - 19.0f, 200.0f, 12.0f },
-          8.0f, hue::coral.withAlpha (0.85f), juce::Justification::left);
+    text (g, "AMP ENVELOPE", { 116.0f, envCaptionY, 200.0f, 12.0f },
+          8.0f, hue::coral.withAlpha (0.85f), juce::Justification::left, true, true);
 }
 
 void WhoompEditor::paintFm (juce::Graphics& g)
 {
     frame (g, fmFrame(), hue::teal, "FM");
 
-    /* Pitch comes in once and runs down the left edge to both operators; each
-       one multiplies it by its own ratio. */
-    wire (g, { { pitchLegFmX, frameTop }, { pitchLegFmX, 250.0f },
-               { fmInX, 250.0f }, { fmInX, fmRow1 } }, hue::teal, 0.45f);
+    /* Pitch comes in once and runs down the inside edge to both operators;
+       each one multiplies it by its own ratio. */
+    wire (g, { { pitchLegFmX, frameTop }, { pitchLegFmX, fmPitchInY },
+               { fmInX, fmPitchInY }, { fmInX, fmRow1 } }, hue::teal, 0.45f);
     wire (g, { { fmInX, fmRow2 }, { opLatchX0, fmRow2 } }, hue::teal, 0.45f);
     wire (g, { { fmInX, fmRow1 }, { opLatchX0, fmRow1 } }, hue::teal, 0.45f);
     node (g, fmInX, fmRow2, hue::teal, 0.5f);
@@ -479,22 +518,30 @@ void WhoompEditor::paintFm (juce::Graphics& g)
     wire (g, { { opLatchEndX, fmRow2 }, { fmRatioX - rMix, fmRow2 } }, hue::teal, 0.45f);
     wire (g, { { opLatchEndX, fmRow1 }, { fmRatioX - rMix, fmRow1 } }, hue::teal, 0.45f);
 
-    /* Op two out through the index, then back down and into op one's phase —
-       arriving on the same node its pitch does, which is exactly what phase
-       modulation is. */
+    /* Op two out through the index and down into op one's phase, arriving on
+       the same node its pitch does — which is exactly what phase modulation
+       is. */
     wire (g, { { fmRatioX + rMix, fmRow2 }, { fmIndexX - rBig, fmRow2 } }, hue::teal, 0.45f);
     wire (g, { { fmIndexX + rBig, fmRow2 }, { fmLoopRightX, fmRow2 },
                { fmLoopRightX, fmLoopY }, { fmInX, fmLoopY } }, hue::teal, 0.45f);
     node (g, fmInX, fmLoopY, hue::teal, 0.5f);
 
-    /* And op one out of the bottom. */
+    /* Op one out of the bottom — and, tapped off the same line, back up the
+       inside edge into op two through CROSS. That return is what makes the
+       two operators modulate each other instead of one just feeding the
+       other; at zero it is an ordinary two-operator stack. */
     wire (g, { { fmRatioX + rMix, fmRow1 }, { fmOutX, fmRow1 },
                { fmOutX, frameBot } }, hue::teal, 0.45f);
 
+    wire (g, { { fmOutX, fmCrossY }, { fmCrossX + rMed, fmCrossY } }, hue::teal, 0.45f);
+    wire (g, { { fmCrossX - rMed, fmCrossY }, { fmCrossLegX, fmCrossY },
+               { fmCrossLegX, fmRow2 }, { fmInX, fmRow2 } }, hue::teal, 0.45f);
+    node (g, fmOutX, fmCrossY, hue::teal, 0.6f, 3.4f);
+
     text (g, "OP 2", { opLatchX0, fmRow2 - 34.0f, 44.0f, 12.0f }, 8.5f, hue::teal,
-          juce::Justification::left);
+          juce::Justification::left, true, true);
     text (g, "OP 1", { opLatchX0, fmRow1 - 34.0f, 44.0f, 12.0f }, 8.5f, hue::teal,
-          juce::Justification::left);
+          juce::Justification::left, true, true);
 
     for (const auto& r : radios)
         if (r.param->paramID != pid::cab)
@@ -507,13 +554,28 @@ void WhoompEditor::paintFm (juce::Graphics& g)
 
     for (const auto& t : kTrims)
         if (t.knob == kIndexEnv)
-            trim (g, t.cx, t.cy, t.r, norm (t.knob), t.bipolar);
+            trim (g, t.cx, t.cy, t.r, norm (t.knob), hue::violet, t.bipolar, "MOD ENV");
 
     wire (g, { { fmCol (3) + rSml + 8.0f, envRow }, { 1095.0f, envRow },
                { 1095.0f, envLegY }, { fmOutX, envLegY } }, hue::teal, 0.40f, 1.1f, 4.0f);
     node (g, fmOutX, envLegY, hue::teal, 0.5f, 2.4f);
-    text (g, "AMP ENVELOPE", { fmCol (0) - 34.0f, envLegY - 19.0f, 200.0f, 12.0f },
-          8.0f, hue::teal.withAlpha (0.85f), juce::Justification::left);
+    text (g, "AMP ENVELOPE", { 696.0f, envCaptionY, 200.0f, 12.0f },
+          8.0f, hue::teal.withAlpha (0.85f), juce::Justification::left, true, true);
+}
+
+void WhoompEditor::paintMod (juce::Graphics& g)
+{
+    frame (g, modFrame(), hue::violet, "MOD ENVELOPE");
+
+    for (const auto& c : kMod)
+        knobCell (g, c.cx, c.cy, c.r, norm (c.knob), hue::violet,
+                  c.label, readout (c.knob), c.bipolar, c.below);
+
+    /* Named targets, so the block says what it reaches without three wires
+       crossing the panel to say the same thing. */
+    text (g, juce::String (juce::CharPointer_UTF8 ("DRIVES  FOLD \xc2\xb7 CUTOFF \xc2\xb7 INDEX")),
+          { modFrameL + 20.0f, modTargetsY, 340.0f, 12.0f }, 7.5f,
+          hue::violet.withAlpha (0.75f), juce::Justification::left, true, true);
 }
 
 void WhoompEditor::paintChain (juce::Graphics& g)
@@ -538,7 +600,7 @@ void WhoompEditor::paintChain (juce::Graphics& g)
                   c.label, readout (c.knob), c.bipolar, c.below);
 
     text (g, "CAB", { cabRect (0).getX(), fxRow1 + 24.0f, 46.0f, 12.0f }, 8.0f, ink (0.62f),
-          juce::Justification::left);
+          juce::Justification::left, true, true);
 
     for (const auto& r : radios)
         if (r.param->paramID == pid::cab)

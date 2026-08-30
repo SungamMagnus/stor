@@ -57,6 +57,11 @@ int main (int argc, char** argv)
     setValue (proc, whm::pid::opRatio[1], 3.5f);
     setValue (proc, whm::pid::index, 4.2f);
     setNorm  (proc, whm::pid::indexEnv, 0.85f);
+    setValue (proc, whm::pid::modA, 1.5f);
+    setValue (proc, whm::pid::modD, 260.0f);
+    setNorm  (proc, whm::pid::modS, 0.15f);
+    setValue (proc, whm::pid::modR, 90.0f);
+    setValue (proc, whm::pid::xfm, 2.6f);
     setValue (proc, whm::pid::fmD, 62.0f);
     setValue (proc, whm::pid::fmLevel, -7.0f);
 

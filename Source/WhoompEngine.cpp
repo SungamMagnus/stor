@@ -43,6 +43,7 @@ void WhoompEngine::prepare (double sampleRate, int)
     filter_.prepare (sr2_);
     subEnv_.prepare (sr2_);
     fmEnv_.prepare (sr2_);
+    modEnv_.prepare (sr2_);
     fall_.prepare (sr2_);
 
     /* Hiss follows the voice down over about a third of a second: long enough
@@ -74,8 +75,10 @@ void WhoompEngine::reset()
     filter_.reset();
     subEnv_.reset();
     fmEnv_.reset();
+    modEnv_.reset();
     fall_.reset();
     opPhase_ = { { 0.0f, 0.0f } };
+    prevCar_ = 0.0f;
     numHeld_ = 0;
 
     decim_.reset();
@@ -108,6 +111,7 @@ void WhoompEngine::setParams (const EngineParams& p)
 
     subEnv_.set (p_.subA, p_.subD, p_.subS, p_.subR);
     fmEnv_.set  (p_.fmA,  p_.fmD,  p_.fmS,  p_.fmR);
+    modEnv_.set (p_.modA, p_.modD, p_.modS, p_.modR);
     fall_.setMs (p_.fallMs);
 
     /* The tape's top-end loss: open when clean, down to a cassette's 4.5 kHz
@@ -228,10 +232,12 @@ void WhoompEngine::noteOn (int midiNote, float velocity)
        inconsistent transient, and the transient is the whole drum. */
     osc_.reset();
     opPhase_ = { { 0.0f, 0.0f } };
+    prevCar_ = 0.0f;
     fall_.trigger();
 
     subEnv_.noteOn();
     fmEnv_.noteOn();
+    modEnv_.noteOn();
 }
 
 void WhoompEngine::noteOff (int midiNote)
@@ -251,6 +257,7 @@ void WhoompEngine::noteOff (int midiNote)
     {
         subEnv_.noteOff();
         fmEnv_.noteOff();
+        modEnv_.noteOff();
     }
 }
 
@@ -259,6 +266,7 @@ void WhoompEngine::allNotesOff()
     numHeld_ = 0;
     subEnv_.noteOff();
     fmEnv_.noteOff();
+    modEnv_.noteOff();
 }
 
 /* ── Voice ───────────────────────────────────────────────────────────────── */
@@ -280,6 +288,10 @@ float WhoompEngine::renderVoice()
     const float subE  = subEnv_.tick();
     const float fmE   = fmEnv_.tick();
 
+    /* Ticked before the early out, so the modulation envelope stays in step
+       with the two amp envelopes whether or not anything is sounding. */
+    const float modE = modEnv_.tick();
+
     if (subE <= 0.0f && fmE <= 0.0f)
         return 0.0f;
 
@@ -287,7 +299,7 @@ float WhoompEngine::renderVoice()
                                    baseHz_ * std::pow (2.0f, p_.bendSemis * pitch / 12.0f));
 
     /* ── Subtractive ─────────────────────────────────────────────────── */
-    const float foldDepth = clamp01 (p_.fold + p_.foldEnv * subE);
+    const float foldDepth = clamp01 (p_.fold + p_.foldEnv * modE);
     const auto s = osc_.tick (hz, foldDepth);
 
     /* The mixer is a mixer: these sum, and are not normalised. Four shapes at
@@ -298,7 +310,7 @@ float WhoompEngine::renderVoice()
 
     if (p_.cutoffHz < 17900.0f || p_.resoQ > 0.71f || std::fabs (p_.filtOctaves) > 0.02f)
     {
-        filter_.set (p_.cutoffHz * std::pow (2.0f, p_.filtOctaves * subE), p_.resoQ);
+        filter_.set (p_.cutoffHz * std::pow (2.0f, p_.filtOctaves * modE), p_.resoQ);
         sub = filter_.lowpass (sub);
     }
 
@@ -308,8 +320,16 @@ float WhoompEngine::renderVoice()
     float fm = 0.0f;
     if (p_.fmGain > 0.0f)
     {
-        const float idx = p_.index * (1.0f - p_.indexEnv + p_.indexEnv * fmE);
-        const float mod = opSample (p_.wave[1], opPhase_[1], opNoise_) * idx;
+        const float idx = p_.index * (1.0f - p_.indexEnv + p_.indexEnv * modE);
+
+        /* The way back: op 1's last output bent into op 2's phase, so the two
+           modulate each other instead of one just feeding the other. Phase
+           modulation is bounded whatever you put into it, so the loop cannot
+           run away — it only gets brighter and more inharmonic. */
+        float ph2 = opPhase_[1] + prevCar_ * p_.xfm * (float) (1.0 / kTwoPi);
+        ph2 -= std::floor (ph2);
+
+        const float mod = opSample (p_.wave[1], ph2, opNoise_) * idx;
 
         float car;
         if (p_.wave[0] == OpWave::noise)
@@ -326,6 +346,7 @@ float WhoompEngine::renderVoice()
             car = opSample (p_.wave[0], ph, opNoise_);
         }
 
+        prevCar_ = car;
         fm = car * fmE * p_.fmGain;
 
         for (int o = 0; o < numOps; ++o)

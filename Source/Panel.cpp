@@ -38,9 +38,27 @@ juce::Font mono (float h, bool bold)
 }
 
 void text (juce::Graphics& g, const juce::String& s, juce::Rectangle<float> r,
-           float size, juce::Colour c, juce::Justification just, bool bold)
+           float size, juce::Colour c, juce::Justification just, bool bold, bool backed)
 {
-    g.setFont (mono (size, bold));
+    const auto f = mono (size, bold);
+
+    /* Paper behind the glyphs, so a trace running under a label stops at it
+       rather than being scribbled through. Sized to the string, not to the
+       box, or every label would punch a hole the width of its cell. */
+    if (backed && s.isNotEmpty())
+    {
+        const float w = juce::GlyphArrangement::getStringWidth (f, s) + 8.0f;
+        const float x = just == juce::Justification::left  ? r.getX() - 4.0f
+                      : just == juce::Justification::right ? r.getRight() - w + 4.0f
+                                                           : r.getCentreX() - w * 0.5f;
+        /* A pixel proud top and bottom, so a label and the value stacked
+           under it mask as one block rather than leaving a stub of trace
+           showing through the seam between them. */
+        g.setColour (hue::paper);
+        g.fillRect (x, r.getY() - 1.0f, w, r.getHeight() + 2.0f);
+    }
+
+    g.setFont (f);
     g.setColour (c);
     g.drawText (s, r, just, false);
 }
@@ -197,22 +215,32 @@ void knobCell (juce::Graphics& g, float cx, float cy, float r, float norm,
     const float ly = below ? cy + r + 6.0f  : cy - r - 34.0f;
     const float vy = below ? cy + r + 19.0f : cy - r - 21.0f;
 
+    /* Both backed: a knob's designation and its reading are the two things
+       that must stay readable wherever the trace happens to run. */
     if (label.isNotEmpty())
-        text (g, label, { cx - 70.0f, ly, 140.0f, 12.0f }, fs, ink (0.62f));
+        text (g, label, { cx - 70.0f, ly, 140.0f, 12.0f }, fs, ink (0.62f),
+              juce::Justification::centred, true, true);
     if (value.isNotEmpty())
-        text (g, value, { cx - 70.0f, vy, 140.0f, 13.0f }, fs + 2.0f, colour);
+        text (g, value, { cx - 70.0f, vy, 140.0f, 13.0f }, fs + 2.0f, colour,
+              juce::Justification::centred, true, true);
 }
 
-void trim (juce::Graphics& g, float cx, float cy, float r, float norm, bool bipolar)
+void trim (juce::Graphics& g, float cx, float cy, float r, float norm,
+           juce::Colour source, bool bipolar, const juce::String& sourceName)
 {
     const auto p = trimAt (cx, cy, r);
 
     /* A dashed leg back to its parent: this is a depth on that control, not a
        control of its own. */
     wire (g, { { cx + r * 0.72f, cy - r * 0.72f }, { p.x - rTrim, p.y + rTrim } },
-          hue::violet, 0.5f, 1.0f, 3.0f);
+          source, 0.5f, 1.0f, 3.0f);
 
-    knob (g, p.x, p.y, rTrim, norm, hue::violet, bipolar);
+    knob (g, p.x, p.y, rTrim, norm, source, bipolar);
+
+    /* And a caption saying what is on the other end of it. */
+    if (sourceName.isNotEmpty())
+        text (g, sourceName, { p.x - 50.0f, p.y + rTrim + 5.0f, 100.0f, 11.0f }, 7.0f,
+              source.withAlpha (0.85f), juce::Justification::centred, true, true);
 }
 
 void latch (juce::Graphics& g, juce::Rectangle<float> r, bool on, juce::Colour colour,

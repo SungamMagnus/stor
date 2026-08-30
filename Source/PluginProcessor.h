@@ -90,11 +90,17 @@ private:
     std::array<juce::AudioParameterFloat*, whm::numOps> opRatio_ {};
     juce::AudioParameterFloat* index_ = nullptr;
     juce::AudioParameterFloat* indexEnv_ = nullptr;
+    juce::AudioParameterFloat* xfm_ = nullptr;
     juce::AudioParameterFloat* fmA_ = nullptr;
     juce::AudioParameterFloat* fmD_ = nullptr;
     juce::AudioParameterFloat* fmS_ = nullptr;
     juce::AudioParameterFloat* fmR_ = nullptr;
     juce::AudioParameterFloat* fmLevel_ = nullptr;
+
+    juce::AudioParameterFloat* modA_ = nullptr;
+    juce::AudioParameterFloat* modD_ = nullptr;
+    juce::AudioParameterFloat* modS_ = nullptr;
+    juce::AudioParameterFloat* modR_ = nullptr;
 
     juce::AudioParameterFloat*  drive_ = nullptr;
     juce::AudioParameterFloat*  hiss_ = nullptr;

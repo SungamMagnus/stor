@@ -31,11 +31,17 @@ const juce::String opWave[numOps]  = { "op1wave", "op2wave" };
 const juce::String opRatio[numOps] = { "op1ratio", "op2ratio" };
 const juce::String index    = "fmindex";
 const juce::String indexEnv = "fmindexenv";
+const juce::String xfm      = "fmxfm";
 const juce::String fmA      = "fma";
 const juce::String fmD      = "fmd";
 const juce::String fmS      = "fms";
 const juce::String fmR      = "fmr";
 const juce::String fmLevel  = "fmlevel";
+
+const juce::String modA = "moda";
+const juce::String modD = "modd";
+const juce::String modS = "mods";
+const juce::String modR = "modr";
 
 const juce::String drive = "drive";
 const juce::String hiss  = "hiss";
@@ -247,6 +253,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
        and the click at the front of an FM kick is the index collapsing. */
     layout.add (makeFloat (pid::indexEnv, "Index Envelope", Range (0.0f, 1.0f), 1.0f, pct));
 
+    /* And the way back: op 1's own output into op 2's phase, which is what
+       makes the pair modulate each other rather than one feeding the other.
+       Off by default — a plain 2-op stack is the thing you reach for first,
+       and this turns it into something with a lot more edge in it. */
+    layout.add (makeFloat (pid::xfm, "Cross FM", Range (0.0f, 8.0f), 0.0f,
+                           [] (float v, int) { return indexReadout (v); }));
+
     layout.add (makeFloat (pid::fmA, "FM Attack", logRange (0.05f, 200.0f), 0.5f, ms));
     layout.add (makeFloat (pid::fmD, "FM Decay", logRange (5.0f, 4000.0f), 90.0f, ms));
     layout.add (makeFloat (pid::fmS, "FM Sustain", Range (0.0f, 1.0f), 0.0f, pct));
@@ -255,6 +268,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
     /* Off by default: the subtractive side alone is already a kick, and the FM
        layer is what you bring in on top of it. */
     layout.add (makeFloat (pid::fmLevel, "FM Level", Range (kLevelOffDb, 12.0f), kLevelOffDb, lvl));
+
+    /* ── Modulation envelope ─────────────────────────────────────────────
+     * Every depth on the panel rides this one, and nothing else does. Keeping
+     * it off the two amp envelopes is the whole point: how far a fold opens
+     * and how long the drum rings are different questions, and tying them
+     * together is what makes a kick synth feel like it only has one shape in
+     * it. Short by default, because a modulation that outlasts the transient
+     * it is shaping is not shaping the transient. */
+    layout.add (makeFloat (pid::modA, "Mod Attack", logRange (0.05f, 200.0f), 0.5f, ms));
+    layout.add (makeFloat (pid::modD, "Mod Decay", logRange (5.0f, 4000.0f), 120.0f, ms));
+    layout.add (makeFloat (pid::modS, "Mod Sustain", Range (0.0f, 1.0f), 0.0f, pct));
+    layout.add (makeFloat (pid::modR, "Mod Release", logRange (5.0f, 4000.0f), 80.0f, ms));
 
     /* ── Tape ────────────────────────────────────────────────────────────
      * Gain into an asymmetric soft clip, a head bump under it, and the top

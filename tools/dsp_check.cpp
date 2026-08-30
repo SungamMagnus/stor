@@ -116,6 +116,15 @@ void fmOnly (WhoompProcessor& p)
     set (p, whm::pid::opRatio[1], 16.0f);
 }
 
+/* The loop closed as hard as it goes. Phase modulation is bounded whatever is
+   put into it, so this should get bright and inharmonic rather than run away —
+   and this is the case that says so. */
+void fmCrossMax (WhoompProcessor& p)
+{
+    fmOnly (p);
+    set (p, whm::pid::xfm, 8.0f);
+}
+
 void fmNoiseModulator (WhoompProcessor& p)
 {
     fmOnly (p);
@@ -184,6 +193,7 @@ const struct { const char* name; Setup setup; } kCases[] = {
     { "fold swept by env",       foldSwept },
     { "filter at full reso",     filterSinging },
     { "FM only, index 12",       fmOnly },
+    { "FM cross-fed, max",       fmCrossMax },
     { "FM noise modulator",      fmNoiseModulator },
     { "FM noise carrier",        fmNoiseCarrier },
     { "tape cranked",            tapeCranked },

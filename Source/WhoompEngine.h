@@ -29,9 +29,12 @@ struct EngineParams
     /* FM. [0] is the carrier, [1] the modulator. */
     std::array<OpWave, numOps> wave { { OpWave::sine, OpWave::sine } };
     std::array<float, numOps> ratio { { 1.0f, 2.0f } };
-    float index = 2.0f, indexEnv = 1.0f;
+    float index = 2.0f, indexEnv = 1.0f, xfm = 0.0f;
     float fmA = 0.5f, fmD = 90.0f, fmS = 0.0f, fmR = 60.0f;
     float fmGain = 0.0f;
+
+    /* The modulation envelope: one source for every depth on the panel. */
+    float modA = 0.5f, modD = 120.0f, modS = 0.0f, modR = 80.0f;
 
     /* Tape, cabinet, room, EQ, output. */
     float drive = 0.0f, hiss = 0.5f;
@@ -105,9 +108,13 @@ private:
     /* Voice */
     Osc  osc_;
     Svf  filter_;
-    Adsr subEnv_, fmEnv_;
+    Adsr subEnv_, fmEnv_, modEnv_;
     Fall fall_;
     std::array<float, numOps> opPhase_ { { 0.0f, 0.0f } };
+
+    /* Op 1's last output, held for op 2 to read. The loop has to break
+       somewhere, and one sample is the cheapest place to break it. */
+    float prevCar_ = 0.0f;
     /* Distinct seeds: two generators left on the default would run the same
        sequence, and the day they were ever consumed at the same rate the hiss
        and the operator would be the same noise. */

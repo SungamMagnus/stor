@@ -47,11 +47,17 @@ WhoompProcessor::WhoompProcessor()
     }
     index_    = fetch<juce::AudioParameterFloat> (apvts, pid::index);
     indexEnv_ = fetch<juce::AudioParameterFloat> (apvts, pid::indexEnv);
+    xfm_      = fetch<juce::AudioParameterFloat> (apvts, pid::xfm);
     fmA_      = fetch<juce::AudioParameterFloat> (apvts, pid::fmA);
     fmD_      = fetch<juce::AudioParameterFloat> (apvts, pid::fmD);
     fmS_      = fetch<juce::AudioParameterFloat> (apvts, pid::fmS);
     fmR_      = fetch<juce::AudioParameterFloat> (apvts, pid::fmR);
     fmLevel_  = fetch<juce::AudioParameterFloat> (apvts, pid::fmLevel);
+
+    modA_ = fetch<juce::AudioParameterFloat> (apvts, pid::modA);
+    modD_ = fetch<juce::AudioParameterFloat> (apvts, pid::modD);
+    modS_ = fetch<juce::AudioParameterFloat> (apvts, pid::modS);
+    modR_ = fetch<juce::AudioParameterFloat> (apvts, pid::modR);
 
     drive_  = fetch<juce::AudioParameterFloat> (apvts, pid::drive);
     hiss_   = fetch<juce::AudioParameterFloat> (apvts, pid::hiss);
@@ -125,9 +131,13 @@ whm::EngineParams WhoompProcessor::gather() const
     }
     p.index    = index_->get();
     p.indexEnv = indexEnv_->get();
+    p.xfm      = xfm_->get();
     p.fmA = fmA_->get(); p.fmD = fmD_->get();
     p.fmS = fmS_->get(); p.fmR = fmR_->get();
     p.fmGain = levelGain (fmLevel_->get());
+
+    p.modA = modA_->get(); p.modD = modD_->get();
+    p.modS = modS_->get(); p.modR = modR_->get();
 
     p.drive  = drive_->get();
     p.hiss   = hiss_->get();
