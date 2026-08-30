@@ -91,6 +91,18 @@
     color: var(--paper);
   }
 
+  #loop[aria-pressed="true"] {
+    background: #ed8159;
+    border-color: #ed8159;
+    color: var(--paper);
+  }
+
+  .div[aria-pressed="true"] {
+    background: #ed8159;
+    border-color: rgba(237, 129, 89, 0.75);
+    color: var(--paper);
+  }
+
   .step { padding: 3px 7px; }
 
   .value { font-size: 11px; min-width: 3.6em; text-align: center; }
@@ -119,6 +131,16 @@
   <div class="strip">
     <button id="hit">Hit</button>
     <button id="auto" aria-pressed="true">Auto on</button>
+
+    <div class="rule"></div>
+
+    <div class="group">
+      <button id="loop" aria-pressed="false">Loop off</button>
+      <label for="bpm">BPM</label>
+      <input type="range" id="bpm" min="40" max="220" value="120">
+      <span class="value" id="bpmout">120 BPM</span>
+      <div class="group" id="div"></div>
+    </div>
 
     <div class="group">
       <span class="cap">Note</span>
