@@ -1,0 +1,35 @@
+# Publishes web/ — the browser prototyper — to GitHub Pages on every push to
+# main that touches it. The plug-in itself isn't part of this: there is
+# nothing to deploy for a VST3, this just keeps the live link in the README
+# pointed at the same panel the C++ draws.
+name: Deploy prototyper to Pages
+
+on:
+  push:
+    branches: [main]
+    paths: [web/**, .github/workflows/pages.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4

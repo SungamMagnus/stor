@@ -11,6 +11,10 @@ because a drum has one pitch.
 
 ![Whoomp panel](docs/panel.png)
 
+**[Try it in the browser](https://sungammagnus.github.io/whoomp/)** — the same
+panel and the same DSP, ported to JavaScript, rendering each hit offline so
+there is nothing to install. See *Prototyping in the browser* below.
+
 ## Install
 
 Copy the plug-ins where your host looks for them:
@@ -192,7 +196,9 @@ cd web && python3 -m http.server 8777
 ```
 
 Then open <http://localhost:8777>. It is ES modules, so it needs to be served
-rather than opened as a `file://` URL.
+rather than opened as a `file://` URL. The same thing runs live at
+<https://sungammagnus.github.io/whoomp/>, deployed by
+`.github/workflows/pages.yml` on every push to `main` that touches `web/`.
 
 Space or the MIDI terminal plays one; the bottom keyboard row walks up
 chromatically from C1; a MIDI keyboard works where the browser allows it. Knobs
