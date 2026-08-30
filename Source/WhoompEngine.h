@@ -108,7 +108,10 @@ private:
     Adsr subEnv_, fmEnv_;
     Fall fall_;
     std::array<float, numOps> opPhase_ { { 0.0f, 0.0f } };
-    Noise opNoise_, hissNoise_;
+    /* Distinct seeds: two generators left on the default would run the same
+       sequence, and the day they were ever consumed at the same rate the hiss
+       and the operator would be the same noise. */
+    Noise opNoise_ { 0x1234567u }, hissNoise_ { 0x9e3779b9u };
 
     int   note_ = kReferenceNote;
     float baseHz_ = 52.0f;

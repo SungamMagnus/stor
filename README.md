@@ -181,6 +181,50 @@ drum.
 the room cache what they were built from; the tape's head bump is the exception,
 redesigned whenever drive changes, because drive is the knob people ride.
 
+## Prototyping in the browser
+
+`web/` is the same instrument in JavaScript: the same panel, the same layout
+constants, the same DSP. It exists so a patch or a layout change can be tried
+in a second rather than a compile.
+
+```sh
+cd web && python3 -m http.server 8777
+```
+
+Then open <http://localhost:8777>. It is ES modules, so it needs to be served
+rather than opened as a `file://` URL.
+
+Space or the MIDI terminal plays one; the bottom keyboard row walks up
+chromatically from C1; a MIDI keyboard works where the browser allows it. Knobs
+behave the way they do in the plug-in — drag, shift to fine, double-click to
+reset, wheel to nudge. **Auto** replays the hit whenever you let a control go,
+which is what makes it a prototyping rig rather than a picture.
+
+**Copy C++** puts the patch on the clipboard as `setValue` lines, ready to paste
+into `tools/panel_shot.cpp` or into the defaults in `Parameters.cpp` — dial it
+in by ear, then move it into the plug-in.
+
+A kick is monophonic and one-shot, so each hit is rendered offline into a buffer
+and then played rather than run through an AudioWorklet. Nothing can glitch,
+there is no module to load, and the meters are captured during the render rather
+than sampled at whatever rate the screen happens to run at. The cost is that a
+knob moved mid-hit lands on the next hit, which is what a drum machine does
+anyway.
+
+### Keeping the two in step
+
+```sh
+node web/parity.mjs                            # the JS port
+./build/dsp_check_artefacts/Release/dsp_check   # the C++
+```
+
+Both print the same thirteen configurations in the same format. They should
+agree to about two parts in a thousand — not to the digit, because the C++
+engine carries floats and JavaScript carries doubles, so the reverb's feedback
+loops and the high-Q bells accumulate rounding differently. Anything larger than
+that is the port having drifted, and a prototyper that lies about what the
+plug-in would do is worse than no prototyper.
+
 ## Build
 
 Needs [JUCE](https://juce.com) 7 or later and CMake 3.22 or later.
