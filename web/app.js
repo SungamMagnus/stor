@@ -7,7 +7,8 @@
 import * as P from './panel.js';
 import { hue } from './panel.js';
 import * as L from './layout.js';
-import { PARAMS, INDEX, defaultPatch, gather, toNorm, fromNorm, valueOf } from './params.js';
+import { PARAMS, INDEX, defaultPatch, gather, toNorm, fromNorm, valueOf,
+         loadPatch, savePatch } from './params.js';
 import { renderHit, metersAt, toWav } from './render.js';
 
 const canvas = document.getElementById('panel');
@@ -15,7 +16,11 @@ const ctx = canvas.getContext('2d');
 const scope = document.getElementById('scope');
 const sctx = scope.getContext('2d');
 
-const patch = defaultPatch();
+/* A saved patch has to pass the same shape check loadPatch() always runs —
+   see params.js — so anything left over from an old schema is discarded here
+   rather than partially trusted. */
+const restored = loadPatch();
+const patch = restored ?? defaultPatch();
 
 /** How the hit is played, as opposed to what it sounds like. */
 const play = {
@@ -271,10 +276,12 @@ function setLoop(on) {
 
 let drag = null;
 
-/** Any change to the sound invalidates the render, and replays it if asked. */
+/** Any change to the sound invalidates the render, replays it if asked, and
+    persists — so the tab you reload picks up where this one left off. */
 function changed(replay = true) {
   stale = true;
   dirty = true;
+  savePatch(patch);
   if (replay && play.auto && !play.loop) trigger();
   else if (replay && play.loop) renderIfStale(false);
 }
@@ -548,4 +555,5 @@ resize();
 syncControls();
 drawScope();
 requestAnimationFrame(frame);
-status('space or the MIDI terminal plays one · L loops · drag a knob · shift for fine · double-click resets');
+status((restored ? 'restored your last patch' : 'no saved patch — starting from the plug-in defaults') +
+       ' · space or the MIDI terminal plays one · L loops · drag a knob · shift for fine · double-click resets');

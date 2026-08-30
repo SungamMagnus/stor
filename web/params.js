@@ -159,3 +159,70 @@ export function gather(patch) {
 /** The value a knob currently carries, in its own units. */
 export const valueOf = (patch, i) => fromNorm(PARAMS[i].range, patch.knobs[i]);
 export const readoutOf = (patch, i) => PARAMS[i].readout(valueOf(patch, i));
+
+/* ── Persistence ─────────────────────────────────────────────────────────
+ * The last patch survives a reload, in the browser this ran in only — it is
+ * a convenience for picking up where you left off, not a save file. Nothing
+ * here is trusted blind: a load fingerprints PARAMS/CHOICES/TOGGLES and
+ * checks it against what is stored, so a schema that has since grown a knob,
+ * dropped one, or reordered the array falls back to the plug-in defaults
+ * instead of quietly misreading old numbers onto the wrong controls.
+ */
+
+const STORE_KEY = 'whoomp.patch.v1';
+const fingerprint = () => [
+  ...PARAMS.map(p => p.id),
+  ...Object.keys(CHOICES),
+  ...Object.keys(TOGGLES),
+].join('|');
+
+function validPatch(candidate) {
+  if (!candidate || typeof candidate !== 'object') return false;
+  if (candidate.fingerprint !== fingerprint()) return false;
+
+  const { knobs, choices, toggles } = candidate;
+  if (!Array.isArray(knobs) || knobs.length !== PARAMS.length) return false;
+  if (!knobs.every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1)) return false;
+
+  if (!choices || typeof choices !== 'object') return false;
+  for (const k of Object.keys(CHOICES))
+    if (typeof choices[k] !== 'number' || !Number.isInteger(choices[k])) return false;
+
+  if (!toggles || typeof toggles !== 'object') return false;
+  for (const k of Object.keys(TOGGLES))
+    if (typeof toggles[k] !== 'boolean') return false;
+
+  return true;
+}
+
+/** What was last saved, or null if there is nothing usable — corrupt JSON, a
+    stale schema, and "never saved" all read the same way: use the defaults. */
+export function loadPatch() {
+  let raw;
+  try { raw = localStorage.getItem(STORE_KEY); } catch { return null; }
+  if (!raw) return null;
+
+  let candidate;
+  try { candidate = JSON.parse(raw); } catch { return null; }
+
+  if (!validPatch(candidate)) return null;
+
+  return {
+    knobs: candidate.knobs.slice(),
+    choices: { ...candidate.choices },
+    toggles: { ...candidate.toggles },
+  };
+}
+
+export function savePatch(patch) {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ fingerprint: fingerprint(), ...patch }));
+  } catch {
+    /* Private browsing, quota, or storage disabled — the rig still works,
+       it just forgets when the tab closes. */
+  }
+}
+
+export function clearSavedPatch() {
+  try { localStorage.removeItem(STORE_KEY); } catch {}
+}
