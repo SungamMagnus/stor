@@ -9,7 +9,7 @@
  * is what a drum machine does anyway.
  */
 
-import { WhoompEngine, Limiter, Halfband } from './dsp.js';
+import { StorEngine, Limiter, Halfband } from './dsp.js';
 
 /** Meter frames captured while rendering, so playback can replay them. */
 const METER_HZ = 240;
@@ -28,7 +28,7 @@ function tailSeconds(p) {
 
 /**
  * Renders one hit. Returns interleaved-by-channel buffers plus the meter
- * track, mirroring what WhoompProcessor::processBlock publishes.
+ * track, mirroring what StorProcessor::processBlock publishes.
  */
 export function renderHit(params, { note = 36, velocity = 1, gateMs = 100,
                                     sampleRate = 48000, seconds: forced = 0 } = {}) {
@@ -37,7 +37,7 @@ export function renderHit(params, { note = 36, velocity = 1, gateMs = 100,
   const seconds = forced > 0 ? forced : tailSeconds(params);
   const n = Math.ceil(seconds * sampleRate);
 
-  const engine = new WhoompEngine(sampleRate);
+  const engine = new StorEngine(sampleRate);
   engine.setParams(params);
 
   const limiter = new Limiter(sampleRate);

@@ -12,7 +12,7 @@
  * Nothing here knows about JUCE or about parameters — it takes numbers in
  * engineering units and returns samples.
  */
-namespace whm
+namespace str
 {
 
 constexpr double kPi    = 3.14159265358979323846;
@@ -446,4 +446,4 @@ inline float dbToGain (float db) { return std::pow (10.0f, db * 0.05f); }
 
 inline float clamp01 (float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
 
-} // namespace whm
+} // namespace str

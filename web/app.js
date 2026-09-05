@@ -477,7 +477,7 @@ el('reset').addEventListener('click', () => {
  * into the defaults in Parameters.cpp. */
 
 function patchAsCpp() {
-  const lines = ['/* Whoomp patch, from the web prototyper. */'];
+  const lines = ['/* Stor patch, from the web prototyper. */'];
   const defaults = defaultPatch();
 
   for (let i = 0; i < PARAMS.length; i++) {
@@ -486,14 +486,14 @@ function patchAsCpp() {
     if (Math.abs(v - p.def) < 1e-4) continue;
 
     const num = Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(Math.abs(v) < 10 ? 3 : 2);
-    lines.push(`setValue (proc, whm::pid::${cppId(p.id)}, ${num}f);`);
+    lines.push(`setValue (proc, str::pid::${cppId(p.id)}, ${num}f);`);
   }
 
   for (const [id, v] of Object.entries(patch.choices))
     if (v !== defaults.choices[id])
-      lines.push(`setNorm  (proc, whm::pid::${cppId(id)}, ${(v / 2).toFixed(1)}f);`);
+      lines.push(`setNorm  (proc, str::pid::${cppId(id)}, ${(v / 2).toFixed(1)}f);`);
 
-  if (patch.toggles.limiter) lines.push('setNorm  (proc, whm::pid::limiter, 1.0f);');
+  if (patch.toggles.limiter) lines.push('setNorm  (proc, str::pid::limiter, 1.0f);');
 
   return lines.join('\n');
 }
@@ -542,7 +542,7 @@ el('wav').addEventListener('click', () => {
   const url = URL.createObjectURL(toWav(hit));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `whoomp-${L.noteName(play.note)}.wav`;
+  a.download = `stor-${L.noteName(play.note)}.wav`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   status('WAV saved');

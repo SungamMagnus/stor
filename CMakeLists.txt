@@ -17,7 +17,7 @@ if(APPLE)
     endif()
 endif()
 
-project(WhoompVST VERSION 0.1.0 LANGUAGES C CXX)
+project(StorVST VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,20 +30,20 @@ if(NOT EXISTS "${JUCE_DIR}/CMakeLists.txt")
 endif()
 add_subdirectory("${JUCE_DIR}" "${CMAKE_BINARY_DIR}/JUCE" EXCLUDE_FROM_ALL)
 
-set(WHOOMP_SOURCES
+set(STOR_SOURCES
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/Parameters.cpp
-    Source/WhoompEngine.cpp
+    Source/StorEngine.cpp
     Source/Panel.cpp)
 
-juce_add_plugin(Whoomp
+juce_add_plugin(Stor
     COMPANY_NAME            "Sungam"
-    BUNDLE_ID               "com.sungam.whoomp"
+    BUNDLE_ID               "com.sungam.stor"
     PLUGIN_MANUFACTURER_CODE Sngm
-    PLUGIN_CODE             Whmp
+    PLUGIN_CODE             Stor
     FORMATS                 VST3 AU Standalone
-    PRODUCT_NAME            "Whoomp"
+    PRODUCT_NAME            "Stór"
     DESCRIPTION             "Kick drum synthesiser"
     IS_SYNTH                TRUE
     NEEDS_MIDI_INPUT        TRUE
@@ -54,17 +54,17 @@ juce_add_plugin(Whoomp
     VST3_CATEGORIES         Instrument Drum Synth
     AU_MAIN_TYPE            kAudioUnitType_MusicDevice)
 
-target_sources(Whoomp PRIVATE ${WHOOMP_SOURCES})
+target_sources(Stor PRIVATE ${STOR_SOURCES})
 
-target_compile_definitions(Whoomp PUBLIC
+target_compile_definitions(Stor PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
     JUCE_REPORT_APP_USAGE=0)
 
-target_include_directories(Whoomp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Source")
+target_include_directories(Stor PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Source")
 
-target_link_libraries(Whoomp
+target_link_libraries(Stor
     PRIVATE juce::juce_audio_utils
     PUBLIC
         juce::juce_recommended_config_flags
@@ -72,12 +72,12 @@ target_link_libraries(Whoomp
         juce::juce_recommended_warning_flags)
 
 # Dev tools: render the faceplate to a PNG, and run the real processor through
-# a set of configurations without a host. -DWHOOMP_TOOLS=ON
-option(WHOOMP_TOOLS "Build the offscreen renderer and the DSP checker" OFF)
-if(WHOOMP_TOOLS)
+# a set of configurations without a host. -DSTOR_TOOLS=ON
+option(STOR_TOOLS "Build the offscreen renderer and the DSP checker" OFF)
+if(STOR_TOOLS)
     foreach(tool panel_shot dsp_check)
         juce_add_console_app(${tool} PRODUCT_NAME "${tool}" NEEDS_CURL FALSE)
-        target_sources(${tool} PRIVATE tools/${tool}.cpp ${WHOOMP_SOURCES})
+        target_sources(${tool} PRIVATE tools/${tool}.cpp ${STOR_SOURCES})
         target_compile_definitions(${tool} PRIVATE
             JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
             JUCE_STANDALONE_APPLICATION=1 JUCE_MODAL_LOOPS_PERMITTED=1)

@@ -92,7 +92,7 @@ function everything(p) {
   set(p, 'outlevel', 12);
 }
 
-console.log(`Whoomp (web port) — ${cases.length} configurations, one note each, ` +
+console.log(`Stor (web port) — ${cases.length} configurations, one note each, ` +
             `${SECONDS} s at ${SR} Hz\n`);
 
 let allFinite = true;

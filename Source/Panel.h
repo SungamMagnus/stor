@@ -16,7 +16,7 @@
  * says how much a control matters. Colour says which part of the circuit it
  * belongs to, and nothing is coloured for any other reason.
  */
-namespace whm::panel
+namespace str::panel
 {
 
 constexpr float designW = 1280.0f, designH = 1120.0f;
@@ -221,4 +221,4 @@ void meter (juce::Graphics&, juce::Rectangle<float>, float value, juce::Colour);
 void segMeter (juce::Graphics&, float cx, float top, float level, juce::Colour,
                int segments = 7);
 
-} // namespace whm::panel
+} // namespace str::panel

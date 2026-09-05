@@ -121,7 +121,7 @@ export function defaultPatch() {
   return { knobs, choices: { ...CHOICES }, toggles: { ...TOGGLES } };
 }
 
-/** Engineering units, mirroring WhoompProcessor::gather(). */
+/** Engineering units, mirroring StorProcessor::gather(). */
 export function gather(patch) {
   const v = id => fromNorm(PARAMS[INDEX[id]].range, patch.knobs[INDEX[id]]);
   const levelGain = db => (db <= -59.9 ? 0 : Math.pow(10, db / 20));
@@ -169,7 +169,7 @@ export const readoutOf = (patch, i) => PARAMS[i].readout(valueOf(patch, i));
  * instead of quietly misreading old numbers onto the wrong controls.
  */
 
-const STORE_KEY = 'whoomp.patch.v1';
+const STORE_KEY = 'stor.patch.v1';
 const fingerprint = () => [
   ...PARAMS.map(p => p.id),
   ...Object.keys(CHOICES),

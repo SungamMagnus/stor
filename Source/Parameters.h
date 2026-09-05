@@ -2,7 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-namespace whm
+namespace str
 {
 
 static constexpr int numBells = 3;      // the parametric section
@@ -127,4 +127,4 @@ juce::String hiCutReadout (float hz);
 extern const char* const opWaveNames[numOpWaves];
 extern const char* const cabNames[numCabs];
 
-} // namespace whm
+} // namespace str

@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace whm
+namespace str
 {
 
 namespace pid
@@ -335,4 +335,4 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
     return layout;
 }
 
-} // namespace whm
+} // namespace str

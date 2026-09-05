@@ -1,4 +1,4 @@
-# Whoomp
+# Stór
 
 A kick drum synthesiser. VST3 / AU / standalone for macOS.
 
@@ -9,9 +9,9 @@ cabinet in a small room, and shaped by three bells and a pair of cuts. Each
 engine has its own ADSR; the pitch envelope that makes a kick a kick is shared,
 because a drum has one pitch.
 
-![Whoomp panel](docs/panel.png)
+![Stór panel](docs/panel.png)
 
-**[Try it in the browser](https://sungammagnus.github.io/whoomp/)** — the same
+**[Try it in the browser](https://sungammagnus.github.io/stor/)** — the same
 panel and the same DSP, ported to JavaScript, rendering each hit offline so
 there is nothing to install. See *Prototyping in the browser* below.
 
@@ -33,7 +33,7 @@ simply never appears in your host and nothing explains why. Run this once after
 installing:
 
 ```sh
-xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Whoomp.vst3 ~/Library/Audio/Plug-Ins/Components/Whoomp.component
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Stór.vst3 ~/Library/Audio/Plug-Ins/Components/Stór.component
 ```
 
 Then restart your host and rescan. Building from source avoids this altogether —
@@ -197,7 +197,7 @@ cd web && python3 -m http.server 8777
 
 Then open <http://localhost:8777>. It is ES modules, so it needs to be served
 rather than opened as a `file://` URL. The same thing runs live at
-<https://sungammagnus.github.io/whoomp/>, deployed by
+<https://sungammagnus.github.io/stor/>, deployed by
 `.github/workflows/pages.yml` on every push to `main` that touches `web/`.
 
 Space or the MIDI terminal plays one; the bottom keyboard row walks up
@@ -253,7 +253,7 @@ hosts skip with no error anywhere. Check a build with `lipo -archs`, not with
 ### Dev tools
 
 ```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWHOOMP_TOOLS=ON
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSTOR_TOOLS=ON
 cmake --build build --target panel_shot dsp_check -j8
 
 ./build/panel_shot_artefacts/Release/panel_shot docs   # renders docs/panel.png

@@ -12,12 +12,12 @@
  * the fixed design space of Panel.h, with a single scale transform applied on
  * the way out, so the layout constants are the only source of truth.
  */
-class WhoompEditor final : public juce::AudioProcessorEditor,
+class StorEditor final : public juce::AudioProcessorEditor,
                            private juce::Timer
 {
 public:
-    explicit WhoompEditor (WhoompProcessor&);
-    ~WhoompEditor() override;
+    explicit StorEditor (StorProcessor&);
+    ~StorEditor() override;
 
     void paint (juce::Graphics&) override;
 
@@ -77,7 +77,7 @@ private:
     void paintMod (juce::Graphics&);
     void paintChain (juce::Graphics&);
 
-    WhoompProcessor& proc;
+    StorProcessor& proc;
     std::vector<Knob>  knobs;
     std::vector<Latch> latches;
     std::vector<Radio> radios;
@@ -86,5 +86,5 @@ private:
     float dragStartNorm = 0.0f;
     juce::Point<float> dragStart;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (WhoompEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (StorEditor)
 };

@@ -1,7 +1,7 @@
 #include "PluginEditor.h"
 
-using namespace whm;
-using namespace whm::panel;
+using namespace str;
+using namespace str::panel;
 
 namespace
 {
@@ -149,7 +149,7 @@ juce::Rectangle<float> box (float cx, float cy, float r)
 
 /* ── Construction ────────────────────────────────────────────────────────── */
 
-WhoompEditor::WhoompEditor (WhoompProcessor& p)
+StorEditor::StorEditor (StorProcessor& p)
     : AudioProcessorEditor (&p), proc (p)
 {
     setOpaque (true);
@@ -164,9 +164,9 @@ WhoompEditor::WhoompEditor (WhoompProcessor& p)
     startTimerHz (30);
 }
 
-WhoompEditor::~WhoompEditor() = default;
+StorEditor::~StorEditor() = default;
 
-void WhoompEditor::buildControls()
+void StorEditor::buildControls()
 {
     knobs.resize (kNumKnobs);
 
@@ -226,15 +226,15 @@ void WhoompEditor::buildControls()
 
 /* ── Values ──────────────────────────────────────────────────────────────── */
 
-float WhoompEditor::scale() const { return (float) getWidth() / designW; }
+float StorEditor::scale() const { return (float) getWidth() / designW; }
 
-juce::Point<float> WhoompEditor::toDesign (juce::Point<float> px) const
+juce::Point<float> StorEditor::toDesign (juce::Point<float> px) const
 {
     const float k = juce::jmax (0.0001f, scale());
     return { px.x / k, px.y / k };
 }
 
-int WhoompEditor::knobAt (juce::Point<float> design) const
+int StorEditor::knobAt (juce::Point<float> design) const
 {
     /* Trims sit on their control's shoulder, so the smaller target wins. */
     int best = -1;
@@ -250,13 +250,13 @@ int WhoompEditor::knobAt (juce::Point<float> design) const
     return best;
 }
 
-float WhoompEditor::value (int i) const
+float StorEditor::value (int i) const
 {
     auto* p = knobs[(std::size_t) i].param;
     return p->convertFrom0to1 (p->getValue());
 }
 
-juce::String WhoompEditor::readout (int i) const
+juce::String StorEditor::readout (int i) const
 {
     const float v = value (i);
 
@@ -294,7 +294,7 @@ juce::String WhoompEditor::readout (int i) const
     }
 }
 
-juce::String WhoompEditor::noteReadout() const
+juce::String StorEditor::noteReadout() const
 {
     const int n = proc.panel.lastNote.load (std::memory_order_relaxed);
     const float hz = value (kTune) * noteRatio (n);
@@ -304,7 +304,7 @@ juce::String WhoompEditor::noteReadout() const
 
 /* ── Interaction ─────────────────────────────────────────────────────────── */
 
-void WhoompEditor::toggle (const Latch& l)
+void StorEditor::toggle (const Latch& l)
 {
     l.param->beginChangeGesture();
     l.param->setValueNotifyingHost (l.param->getValue() > 0.5f ? 0.0f : 1.0f);
@@ -312,7 +312,7 @@ void WhoompEditor::toggle (const Latch& l)
     repaint();
 }
 
-void WhoompEditor::select (const Radio& r)
+void StorEditor::select (const Radio& r)
 {
     r.param->beginChangeGesture();
     r.param->setValueNotifyingHost (r.param->convertTo0to1 ((float) r.index));
@@ -320,7 +320,7 @@ void WhoompEditor::select (const Radio& r)
     repaint();
 }
 
-void WhoompEditor::mouseDown (const juce::MouseEvent& e)
+void StorEditor::mouseDown (const juce::MouseEvent& e)
 {
     const auto d = toDesign (e.position);
 
@@ -343,7 +343,7 @@ void WhoompEditor::mouseDown (const juce::MouseEvent& e)
     setMouseCursor (juce::MouseCursor::NoCursor);
 }
 
-void WhoompEditor::mouseDrag (const juce::MouseEvent& e)
+void StorEditor::mouseDrag (const juce::MouseEvent& e)
 {
     if (dragIdx < 0)
         return;
@@ -358,7 +358,7 @@ void WhoompEditor::mouseDrag (const juce::MouseEvent& e)
     repaint();
 }
 
-void WhoompEditor::mouseUp (const juce::MouseEvent&)
+void StorEditor::mouseUp (const juce::MouseEvent&)
 {
     if (dragIdx < 0)
         return;
@@ -368,7 +368,7 @@ void WhoompEditor::mouseUp (const juce::MouseEvent&)
     setMouseCursor (juce::MouseCursor::NormalCursor);
 }
 
-void WhoompEditor::mouseDoubleClick (const juce::MouseEvent& e)
+void StorEditor::mouseDoubleClick (const juce::MouseEvent& e)
 {
     const int idx = knobAt (toDesign (e.position));
     if (idx < 0)
@@ -381,7 +381,7 @@ void WhoompEditor::mouseDoubleClick (const juce::MouseEvent& e)
     repaint();
 }
 
-void WhoompEditor::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& w)
+void StorEditor::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& w)
 {
     const int idx = knobAt (toDesign (e.position));
     if (idx < 0)
@@ -399,7 +399,7 @@ void WhoompEditor::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseW
 
 /* ── Paint ───────────────────────────────────────────────────────────────── */
 
-void WhoompEditor::paint (juce::Graphics& g)
+void StorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (hue::paper);
     g.addTransform (juce::AffineTransform::scale (scale()));
@@ -413,11 +413,11 @@ void WhoompEditor::paint (juce::Graphics& g)
     paintMod (g);
     paintChain (g);
 
-    tracked (g, "WHOOMP", { 990.0f, 1058.0f, 220.0f, 22.0f }, 16.0f, ink (0.55f), 5.0f, false);
+    tracked (g, juce::CharPointer_UTF8 ("STÓR"), { 990.0f, 1058.0f, 220.0f, 22.0f }, 16.0f, ink (0.55f), 5.0f, false);
     text (g, "KICK SYNTHESISER", { 990.0f, 1082.0f, 220.0f, 12.0f }, 7.5f, ink (0.38f));
 }
 
-void WhoompEditor::paintPitch (juce::Graphics& g)
+void StorEditor::paintPitch (juce::Graphics& g)
 {
     const auto& state = proc.panel;
 
@@ -450,7 +450,7 @@ void WhoompEditor::paintPitch (juce::Graphics& g)
           juce::Justification::left, true, true);
 }
 
-void WhoompEditor::paintSubtractive (juce::Graphics& g)
+void StorEditor::paintSubtractive (juce::Graphics& g)
 {
     frame (g, subFrame(), hue::coral, "SUBTRACTIVE");
 
@@ -502,7 +502,7 @@ void WhoompEditor::paintSubtractive (juce::Graphics& g)
           8.0f, hue::coral.withAlpha (0.85f), juce::Justification::left, true, true);
 }
 
-void WhoompEditor::paintFm (juce::Graphics& g)
+void StorEditor::paintFm (juce::Graphics& g)
 {
     frame (g, fmFrame(), hue::teal, "FM");
 
@@ -563,7 +563,7 @@ void WhoompEditor::paintFm (juce::Graphics& g)
           8.0f, hue::teal.withAlpha (0.85f), juce::Justification::left, true, true);
 }
 
-void WhoompEditor::paintMod (juce::Graphics& g)
+void StorEditor::paintMod (juce::Graphics& g)
 {
     frame (g, modFrame(), hue::violet, "MOD ENVELOPE");
 
@@ -578,7 +578,7 @@ void WhoompEditor::paintMod (juce::Graphics& g)
           hue::violet.withAlpha (0.75f), juce::Justification::left, true, true);
 }
 
-void WhoompEditor::paintChain (juce::Graphics& g)
+void StorEditor::paintChain (juce::Graphics& g)
 {
     const auto& state = proc.panel;
 

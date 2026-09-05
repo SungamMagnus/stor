@@ -22,20 +22,20 @@ struct Result
     bool  finite = true;
 };
 
-void set (WhoompProcessor& p, const juce::String& id, float value)
+void set (StorProcessor& p, const juce::String& id, float value)
 {
     if (auto* param = p.apvts.getParameter (id))
         param->setValueNotifyingHost (param->convertTo0to1 (value));
 }
 
-void setNorm (WhoompProcessor& p, const juce::String& id, float norm)
+void setNorm (StorProcessor& p, const juce::String& id, float norm)
 {
     if (auto* param = p.apvts.getParameter (id))
         param->setValueNotifyingHost (norm);
 }
 
 /** One note, three seconds, and what came back. */
-Result render (WhoompProcessor& proc)
+Result render (StorProcessor& proc)
 {
     juce::AudioBuffer<float> buffer (2, kBlock);
     const int blocks = (int) (kSampleRate * kSeconds) / kBlock;
@@ -48,8 +48,8 @@ Result render (WhoompProcessor& proc)
     for (int b = 0; b < blocks; ++b)
     {
         juce::MidiBuffer midi;
-        if (b == 0) midi.addEvent (juce::MidiMessage::noteOn (1, whm::kReferenceNote, 1.0f), 0);
-        if (b == 4) midi.addEvent (juce::MidiMessage::noteOff (1, whm::kReferenceNote), 0);
+        if (b == 0) midi.addEvent (juce::MidiMessage::noteOn (1, str::kReferenceNote, 1.0f), 0);
+        if (b == 4) midi.addEvent (juce::MidiMessage::noteOff (1, str::kReferenceNote), 0);
 
         proc.processBlock (buffer, midi);
 
@@ -80,111 +80,111 @@ void report (const char* name, const Result& r)
                  name, r.peak, r.rms, r.tailMs, r.dc, r.finite ? "ok" : "NOT FINITE");
 }
 
-using Setup = void (*) (WhoompProcessor&);
+using Setup = void (*) (StorProcessor&);
 
-void plainSine (WhoompProcessor&) {}
+void plainSine (StorProcessor&) {}
 
-void allShapes (WhoompProcessor& p)
+void allShapes (StorProcessor& p)
 {
-    setNorm (p, whm::pid::lvlTri, 1.0f);
-    setNorm (p, whm::pid::lvlSaw, 1.0f);
-    setNorm (p, whm::pid::lvlFold, 1.0f);
-    setNorm (p, whm::pid::fold, 1.0f);
+    setNorm (p, str::pid::lvlTri, 1.0f);
+    setNorm (p, str::pid::lvlSaw, 1.0f);
+    setNorm (p, str::pid::lvlFold, 1.0f);
+    setNorm (p, str::pid::fold, 1.0f);
 }
 
-void foldSwept (WhoompProcessor& p)
+void foldSwept (StorProcessor& p)
 {
-    setNorm (p, whm::pid::lvlSine, 0.0f);
-    setNorm (p, whm::pid::lvlFold, 1.0f);
-    setNorm (p, whm::pid::fold, 0.2f);
-    set     (p, whm::pid::foldEnv, 0.8f);
+    setNorm (p, str::pid::lvlSine, 0.0f);
+    setNorm (p, str::pid::lvlFold, 1.0f);
+    setNorm (p, str::pid::fold, 0.2f);
+    set     (p, str::pid::foldEnv, 0.8f);
 }
 
-void filterSinging (WhoompProcessor& p)
+void filterSinging (StorProcessor& p)
 {
-    setNorm (p, whm::pid::lvlSaw, 1.0f);
-    set     (p, whm::pid::cutoff, 120.0f);
-    setNorm (p, whm::pid::reso, 1.0f);
-    set     (p, whm::pid::filtEnv, 1.0f);
+    setNorm (p, str::pid::lvlSaw, 1.0f);
+    set     (p, str::pid::cutoff, 120.0f);
+    setNorm (p, str::pid::reso, 1.0f);
+    set     (p, str::pid::filtEnv, 1.0f);
 }
 
-void fmOnly (WhoompProcessor& p)
+void fmOnly (StorProcessor& p)
 {
-    set (p, whm::pid::subLevel, whm::kLevelOffDb);
-    set (p, whm::pid::fmLevel, 0.0f);
-    set (p, whm::pid::index, 12.0f);
-    set (p, whm::pid::opRatio[1], 16.0f);
+    set (p, str::pid::subLevel, str::kLevelOffDb);
+    set (p, str::pid::fmLevel, 0.0f);
+    set (p, str::pid::index, 12.0f);
+    set (p, str::pid::opRatio[1], 16.0f);
 }
 
 /* The loop closed as hard as it goes. Phase modulation is bounded whatever is
    put into it, so this should get bright and inharmonic rather than run away —
    and this is the case that says so. */
-void fmCrossMax (WhoompProcessor& p)
+void fmCrossMax (StorProcessor& p)
 {
     fmOnly (p);
-    set (p, whm::pid::xfm, 8.0f);
+    set (p, str::pid::xfm, 8.0f);
 }
 
-void fmNoiseModulator (WhoompProcessor& p)
+void fmNoiseModulator (StorProcessor& p)
 {
     fmOnly (p);
-    setNorm (p, whm::pid::opWave[1], 1.0f);   // the last of three: noise
+    setNorm (p, str::pid::opWave[1], 1.0f);   // the last of three: noise
 }
 
-void fmNoiseCarrier (WhoompProcessor& p)
+void fmNoiseCarrier (StorProcessor& p)
 {
     fmOnly (p);
-    setNorm (p, whm::pid::opWave[0], 1.0f);
+    setNorm (p, str::pid::opWave[0], 1.0f);
 }
 
-void tapeCranked (WhoompProcessor& p)
+void tapeCranked (StorProcessor& p)
 {
-    setNorm (p, whm::pid::drive, 1.0f);
-    setNorm (p, whm::pid::hiss, 1.0f);
+    setNorm (p, str::pid::drive, 1.0f);
+    setNorm (p, str::pid::hiss, 1.0f);
 }
 
-void tapeCrankedSilent (WhoompProcessor& p)
+void tapeCrankedSilent (StorProcessor& p)
 {
     tapeCranked (p);
-    set (p, whm::pid::subLevel, whm::kLevelOffDb);
+    set (p, str::pid::subLevel, str::kLevelOffDb);
 }
 
-void cabAndRoom (WhoompProcessor& p)
+void cabAndRoom (StorProcessor& p)
 {
-    setNorm (p, whm::pid::cabMix, 1.0f);
-    setNorm (p, whm::pid::roomMix, 1.0f);
-    setNorm (p, whm::pid::roomSize, 1.0f);
-    setNorm (p, whm::pid::roomDamp, 0.0f);
+    setNorm (p, str::pid::cabMix, 1.0f);
+    setNorm (p, str::pid::roomMix, 1.0f);
+    setNorm (p, str::pid::roomSize, 1.0f);
+    setNorm (p, str::pid::roomDamp, 0.0f);
 }
 
-void eqExtremes (WhoompProcessor& p)
+void eqExtremes (StorProcessor& p)
 {
-    set (p, whm::pid::loCut, 600.0f);
-    set (p, whm::pid::hiCut, 600.0f);
-    for (int b = 0; b < whm::numBells; ++b)
+    set (p, str::pid::loCut, 600.0f);
+    set (p, str::pid::hiCut, 600.0f);
+    for (int b = 0; b < str::numBells; ++b)
     {
-        set (p, whm::pid::bellGain[b], 18.0f);
-        set (p, whm::pid::bellQ[b], 12.0f);
+        set (p, str::pid::bellGain[b], 18.0f);
+        set (p, str::pid::bellQ[b], 12.0f);
     }
 }
 
-void everythingAtOnce (WhoompProcessor& p)
+void everythingAtOnce (StorProcessor& p)
 {
     allShapes (p);
     filterSinging (p);
     fmOnly (p);
-    set (p, whm::pid::subLevel, 12.0f);
-    set (p, whm::pid::fmLevel, 12.0f);
+    set (p, str::pid::subLevel, 12.0f);
+    set (p, str::pid::fmLevel, 12.0f);
     tapeCranked (p);
     cabAndRoom (p);
     eqExtremes (p);
-    set (p, whm::pid::outLevel, 12.0f);
+    set (p, str::pid::outLevel, 12.0f);
 }
 
-void limited (WhoompProcessor& p)
+void limited (StorProcessor& p)
 {
     everythingAtOnce (p);
-    setNorm (p, whm::pid::limiter, 1.0f);
+    setNorm (p, str::pid::limiter, 1.0f);
 }
 
 const struct { const char* name; Setup setup; } kCases[] = {
@@ -209,14 +209,14 @@ int main()
 {
     juce::ScopedJuceInitialiser_GUI init;
 
-    std::printf ("Whoomp — %d configurations, one note each, %d s at %.0f Hz\n\n",
+    std::printf ("Stor — %d configurations, one note each, %d s at %.0f Hz\n\n",
                  (int) (sizeof (kCases) / sizeof (kCases[0])), kSeconds, kSampleRate);
 
     bool allFinite = true;
 
     for (const auto& c : kCases)
     {
-        WhoompProcessor proc;
+        StorProcessor proc;
         proc.setRateAndBufferSizeDetails (kSampleRate, kBlock);
         proc.prepareToPlay (kSampleRate, kBlock);
         c.setup (proc);
@@ -226,7 +226,7 @@ int main()
         allFinite = allFinite && r.finite;
     }
 
-    std::printf ("\nreported latency: %d samples\n", whm::WhoompEngine::latencySamples());
+    std::printf ("\nreported latency: %d samples\n", str::StorEngine::latencySamples());
     std::printf ("%s\n", allFinite ? "all finite" : "SOMETHING WENT NON-FINITE");
 
     return allFinite ? 0 : 1;

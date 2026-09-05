@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace whm
+namespace str
 {
 
 /**
@@ -63,4 +63,4 @@ private:
     float env_ = 0.0f, gain_ = 1.0f, reduction_ = 1.0f;
 };
 
-} // namespace whm
+} // namespace str

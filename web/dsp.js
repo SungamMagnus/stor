@@ -1,5 +1,5 @@
 /*
- * Whoomp — the engine, ported from Source/Dsp.h and Source/WhoompEngine.cpp.
+ * Stor — the engine, ported from Source/Dsp.h and Source/StorEngine.cpp.
  *
  * A kick is monophonic and one-shot, so this renders a whole hit offline into
  * a buffer rather than running in an AudioWorklet: the DSP is identical, there
@@ -335,7 +335,7 @@ const SINE = 0, TRI = 1, NOISE = 2;
  * cabinet, then the room that cabinet is standing in, and an EQ behind all of
  * it that gets to shape the room as well.
  */
-export class WhoompEngine {
+export class StorEngine {
   constructor(sr) {
     this.sr = sr;
     this.sr2 = sr * 2;

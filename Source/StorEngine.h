@@ -7,7 +7,7 @@
 #include "Dsp.h"
 #include "Parameters.h"
 
-namespace whm
+namespace str
 {
 
 /** Everything the engine needs for a block, already in engineering units. */
@@ -58,7 +58,7 @@ struct EngineParams
  * down through a linear-phase halfband. Everything after them is linear, so it
  * stays at the host rate where it belongs.
  */
-class WhoompEngine
+class StorEngine
 {
 public:
     void prepare (double sampleRate, int maxBlockSize);
@@ -172,4 +172,4 @@ private:
     float envCoeff_ = 0.01f;
 };
 
-} // namespace whm
+} // namespace str

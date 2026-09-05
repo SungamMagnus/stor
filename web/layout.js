@@ -165,7 +165,7 @@ export function paint(ctx, patch, meters) {
   paintFm(ctx, patch);
   paintChain(ctx, patch, meters);
 
-  P.tracked(ctx, 'WHOOMP', { x: 990, y: 940, w: 220, h: 22 }, 16, ink(0.55), 5, false);
+  P.tracked(ctx, 'STÓR', { x: 990, y: 940, w: 220, h: 22 }, 16, ink(0.55), 5, false);
   P.text(ctx, 'KICK SYNTHESISER', { x: 990, y: 964, w: 220, h: 12 }, 7.5, ink(0.38));
 }
 

@@ -1,6 +1,6 @@
-#include "WhoompEngine.h"
+#include "StorEngine.h"
 
-namespace whm
+namespace str
 {
 
 namespace
@@ -34,7 +34,7 @@ bool nearlyEqual (float a, float b) { return std::fabs (a - b) < 1.0e-6f; }
 
 /* ── Setup ───────────────────────────────────────────────────────────────── */
 
-void WhoompEngine::prepare (double sampleRate, int)
+void StorEngine::prepare (double sampleRate, int)
 {
     sr_  = sampleRate > 0.0 ? sampleRate : 48000.0;
     sr2_ = sr_ * 2.0;
@@ -69,7 +69,7 @@ void WhoompEngine::prepare (double sampleRate, int)
     reset();
 }
 
-void WhoompEngine::reset()
+void StorEngine::reset()
 {
     osc_.reset();
     filter_.reset();
@@ -104,7 +104,7 @@ void WhoompEngine::reset()
     voiceEnv_ = 0.0f;
 }
 
-void WhoompEngine::setParams (const EngineParams& p)
+void StorEngine::setParams (const EngineParams& p)
 {
     const bool first = ! haveCache_;
     p_ = p;
@@ -141,7 +141,7 @@ void WhoompEngine::setParams (const EngineParams& p)
     haveCache_ = true;
 }
 
-void WhoompEngine::designCab()
+void StorEngine::designCab()
 {
     const auto& c = kCabs[(std::size_t) juce::jlimit (0, numCabs - 1, (int) p_.cab)];
 
@@ -151,7 +151,7 @@ void WhoompEngine::designCab()
     cabChain_[3].lowpass  (sr_, c.lpHz, c.lpQ);
 }
 
-void WhoompEngine::designEq()
+void StorEngine::designEq()
 {
     loCutOn_ = loCutActive (p_.loCutHz);
     hiCutOn_ = hiCutActive (p_.hiCutHz);
@@ -178,7 +178,7 @@ void WhoompEngine::designEq()
     }
 }
 
-void WhoompEngine::designRoom()
+void StorEngine::designRoom()
 {
     /* Half length to one and a half, so the room goes from a booth to a
        live-ish drum room and no further. */
@@ -218,7 +218,7 @@ void WhoompEngine::designRoom()
 
 /* ── Notes ───────────────────────────────────────────────────────────────── */
 
-void WhoompEngine::noteOn (int midiNote, float velocity)
+void StorEngine::noteOn (int midiNote, float velocity)
 {
     if (numHeld_ < (int) held_.size())
         held_[(std::size_t) numHeld_++] = midiNote;
@@ -240,7 +240,7 @@ void WhoompEngine::noteOn (int midiNote, float velocity)
     modEnv_.noteOn();
 }
 
-void WhoompEngine::noteOff (int midiNote)
+void StorEngine::noteOff (int midiNote)
 {
     for (int i = 0; i < numHeld_; ++i)
         if (held_[(std::size_t) i] == midiNote)
@@ -261,7 +261,7 @@ void WhoompEngine::noteOff (int midiNote)
     }
 }
 
-void WhoompEngine::allNotesOff()
+void StorEngine::allNotesOff()
 {
     numHeld_ = 0;
     subEnv_.noteOff();
@@ -271,7 +271,7 @@ void WhoompEngine::allNotesOff()
 
 /* ── Voice ───────────────────────────────────────────────────────────────── */
 
-float WhoompEngine::opSample (OpWave w, float phase, Noise& n)
+float StorEngine::opSample (OpWave w, float phase, Noise& n)
 {
     switch (w)
     {
@@ -282,7 +282,7 @@ float WhoompEngine::opSample (OpWave w, float phase, Noise& n)
     }
 }
 
-float WhoompEngine::renderVoice()
+float StorEngine::renderVoice()
 {
     const float pitch = fall_.tick();
     const float subE  = subEnv_.tick();
@@ -361,7 +361,7 @@ float WhoompEngine::renderVoice()
 
 /* ── Tape ────────────────────────────────────────────────────────────────── */
 
-float WhoompEngine::tape (float x)
+float StorEngine::tape (float x)
 {
     const float drive = p_.drive;
 
@@ -416,7 +416,7 @@ float WhoompEngine::tape (float x)
  * drum and what you want to do to it you want to do to all of it.
  */
 
-float WhoompEngine::cabinet (float x)
+float StorEngine::cabinet (float x)
 {
     if (p_.cabMix <= 0.0f)
         return x;
@@ -429,7 +429,7 @@ float WhoompEngine::cabinet (float x)
     return x + (c - x) * p_.cabMix;
 }
 
-float WhoompEngine::eq (float x, int channel)
+float StorEngine::eq (float x, int channel)
 {
     const auto c = (std::size_t) channel;
 
@@ -442,7 +442,7 @@ float WhoompEngine::eq (float x, int channel)
 
 /* ── Block ───────────────────────────────────────────────────────────────── */
 
-void WhoompEngine::process (float* left, float* right, int numSamples)
+void StorEngine::process (float* left, float* right, int numSamples)
 {
     const bool room = p_.roomMix > 0.0f;
 
@@ -497,4 +497,4 @@ void WhoompEngine::process (float* left, float* right, int numSamples)
     }
 }
 
-} // namespace whm
+} // namespace str

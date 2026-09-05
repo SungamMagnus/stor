@@ -1,6 +1,6 @@
 #include "Panel.h"
 
-namespace whm::panel
+namespace str::panel
 {
 
 namespace
@@ -292,4 +292,4 @@ void segMeter (juce::Graphics& g, float cx, float top, float level, juce::Colour
     }
 }
 
-} // namespace whm::panel
+} // namespace str::panel

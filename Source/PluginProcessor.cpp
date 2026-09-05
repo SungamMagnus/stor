@@ -2,7 +2,7 @@
 
 #include "PluginEditor.h"
 
-using namespace whm;
+using namespace str;
 
 namespace
 {
@@ -15,7 +15,7 @@ T* fetch (juce::AudioProcessorValueTreeState& s, const juce::String& id)
 }
 } // namespace
 
-WhoompProcessor::WhoompProcessor()
+StorProcessor::StorProcessor()
     : AudioProcessor (BusesProperties()
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
       apvts (*this, nullptr, "state", createLayout())
@@ -81,7 +81,7 @@ WhoompProcessor::WhoompProcessor()
     limiterOn_ = fetch<juce::AudioParameterBool> (apvts, pid::limiter);
 }
 
-bool WhoompProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool StorProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     if (! layouts.getMainInputChannelSet().isDisabled())
         return false;
@@ -90,7 +90,7 @@ bool WhoompProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
     return out == juce::AudioChannelSet::mono() || out == juce::AudioChannelSet::stereo();
 }
 
-void WhoompProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void StorProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     engine_.prepare (sampleRate, samplesPerBlock);
     limiter_.prepare (sampleRate);
@@ -100,10 +100,10 @@ void WhoompProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     monoScratch_.setSize (1, juce::jmax (1, samplesPerBlock), false, true, true);
 
-    setLatencySamples (whm::WhoompEngine::latencySamples());
+    setLatencySamples (str::StorEngine::latencySamples());
 }
 
-whm::EngineParams WhoompProcessor::gather() const
+str::EngineParams StorProcessor::gather() const
 {
     EngineParams p;
 
@@ -162,7 +162,7 @@ whm::EngineParams WhoompProcessor::gather() const
     return p;
 }
 
-void WhoompProcessor::renderSegment (juce::AudioBuffer<float>& buffer, int start, int count)
+void StorProcessor::renderSegment (juce::AudioBuffer<float>& buffer, int start, int count)
 {
     if (count <= 0)
         return;
@@ -189,7 +189,7 @@ void WhoompProcessor::renderSegment (juce::AudioBuffer<float>& buffer, int start
     }
 }
 
-void WhoompProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
+void StorProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
     juce::ScopedNoDenormals noDenormals;
 
@@ -247,18 +247,18 @@ void WhoompProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
     panel.sounding.store (engine_.sounding(), std::memory_order_relaxed);
 }
 
-juce::AudioProcessorEditor* WhoompProcessor::createEditor()
+juce::AudioProcessorEditor* StorProcessor::createEditor()
 {
-    return new WhoompEditor (*this);
+    return new StorEditor (*this);
 }
 
-void WhoompProcessor::getStateInformation (juce::MemoryBlock& dest)
+void StorProcessor::getStateInformation (juce::MemoryBlock& dest)
 {
     if (auto xml = apvts.copyState().createXml())
         copyXmlToBinary (*xml, dest);
 }
 
-void WhoompProcessor::setStateInformation (const void* data, int size)
+void StorProcessor::setStateInformation (const void* data, int size)
 {
     if (auto xml = getXmlFromBinary (data, size))
         if (xml->hasTagName (apvts.state.getType()))
@@ -267,5 +267,5 @@ void WhoompProcessor::setStateInformation (const void* data, int size)
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new WhoompProcessor();
+    return new StorProcessor();
 }
