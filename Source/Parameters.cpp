@@ -61,10 +61,41 @@ const juce::String bellQ[numBells]    = { "bell1q", "bell2q", "bell3q" };
 
 const juce::String outLevel = "outlevel";
 const juce::String limiter  = "limiter";
+
+const juce::String rndStrength = "rndstrength";
+const juce::String rndSync     = "rndsync";
+const juce::String rndRate     = "rndrate";
 }
 
 const char* const opWaveNames[numOpWaves] = { "SIN", "TRI", "NSE" };
 const char* const cabNames[numCabs]       = { "12\"", "15\"", "18\"" };
+
+const char* const rndRateNames[numRndRates] = {
+    "1/1", "1/2", "1/4", "1/4 T", "1/8", "1/8 T", "1/16", "1/16 T", "1/32"
+};
+const float rndRateBeats[numRndRates] = {
+    4.0f, 2.0f, 1.0f, 2.0f / 3.0f, 0.5f, 1.0f / 3.0f, 0.25f, 1.0f / 6.0f, 0.125f
+};
+
+const juce::String* const knobIds[kNumKnobs] = {
+    &pid::tune, &pid::bend, &pid::fall, &pid::vel,
+
+    &pid::lvlSine, &pid::lvlTri, &pid::lvlSaw, &pid::lvlFold,
+    &pid::fold, &pid::foldEnv, &pid::cutoff, &pid::reso, &pid::filtEnv,
+    &pid::subA, &pid::subD, &pid::subS, &pid::subR, &pid::subLevel,
+
+    &pid::opRatio[0], &pid::opRatio[1], &pid::index, &pid::indexEnv, &pid::xfm,
+    &pid::fmA, &pid::fmD, &pid::fmS, &pid::fmR, &pid::fmLevel,
+
+    &pid::modA, &pid::modD, &pid::modS, &pid::modR,
+    &pid::drive, &pid::hiss, &pid::cabMix,
+    &pid::roomSize, &pid::roomDamp, &pid::roomMix,
+    &pid::loCut,
+    &pid::bellFreq[0], &pid::bellGain[0], &pid::bellQ[0],
+    &pid::bellFreq[1], &pid::bellGain[1], &pid::bellQ[1],
+    &pid::bellFreq[2], &pid::bellGain[2], &pid::bellQ[2],
+    &pid::hiCut, &pid::outLevel
+};
 
 /* ── Engineering units ───────────────────────────────────────────────────── */
 
@@ -331,6 +362,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
     /* Off by default: a kick running hot into the DAW is often what you want,
        and the host has somewhere to put it. */
     layout.add (makeBool (pid::limiter, "Limiter", false));
+
+    /* ── Random ──────────────────────────────────────────────────────────
+     * Depth, trigger and rate live here as ordinary parameters — worth
+     * automating, worth recalling with a preset. Which controls it reaches
+     * is a different kind of state, decided per-control on the panel, and
+     * is not a parameter at all. */
+    layout.add (makeFloat (pid::rndStrength, "Random Strength", Range (0.0f, 1.0f), 0.35f, pct));
+    layout.add (makeBool (pid::rndSync, "Random Sync", false));
+    layout.add (makeChoice (pid::rndRate, "Random Rate",
+                            juce::StringArray (rndRateNames, numRndRates), 4));
 
     return layout;
 }

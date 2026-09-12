@@ -151,6 +151,26 @@ In this order, and the panel draws it in this order:
 - **Output** and **LIM** — the limiter is off by default. A kick running hot into
   the DAW is often what you want, and the host has somewhere to put it.
 
+### Random
+
+Its own block below the chain, because it is a layer over every control on the
+panel rather than a stage in the signal path. Every knob has a small box on
+its upper-left shoulder — click it to arm that control. An armed knob gets its
+own offset generator, so two armed knobs never move by the same amount on the
+same hit; the knob's own pointer still shows the value it is set to, and a
+violet arc shows what the randomiser is doing to it right now.
+
+- **Strength** — one global depth, scaling every armed control's offset
+  together. At zero, an armed knob still shows its ring; it just never moves.
+- **Trigger** — **Hit** rolls fresh offsets on every MIDI note; **Sync** rolls
+  on the host's transport at **Rate**, from a whole note down to a
+  thirty-second, triplets included.
+
+What the randomiser reaches is not automatable — it is a choice about the
+patch, not a performance value — so which controls are armed is saved with the
+project and the plug-in's own state, but does not appear as one of the host's
+automation lanes.
+
 ## How it works
 
 **One voice.** A kick is one drum. Playing a second note retriggers the first,

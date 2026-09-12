@@ -19,7 +19,7 @@
 namespace str::panel
 {
 
-constexpr float designW = 1280.0f, designH = 1120.0f;
+constexpr float designW = 1280.0f, designH = 1240.0f;
 
 /* ── Palette ─────────────────────────────────────────────────────────────
  * Four hues, four roles, plus the limiter's. Pitch has no hue of its own — it
@@ -161,6 +161,37 @@ inline juce::Point<float> trimAt (float cx, float cy, float r)
     return { cx + r + 26.0f, cy - r - 8.0f };
 }
 
+/* ── Random ──────────────────────────────────────────────────────────────
+ * Its own block below the chain: a layer over every control on the panel,
+ * not a stage in any one signal path, so it does not live inside either
+ * engine's frame or on the chain's rail. */
+constexpr float rndFrameL = 46.0f, rndFrameR = 590.0f;
+constexpr float rndFrameTop = 1070.0f, rndFrameBot = 1200.0f;
+constexpr float rndRow = 1148.0f, rndCaptionY = 1184.0f;
+constexpr float rndStrengthX = 110.0f, rndRateX = 430.0f, rndLampX = 520.0f;
+constexpr float rndTrigX0 = 236.0f, rndTrigStep = 76.0f, rndTrigW = 70.0f, rndTrigH = 18.0f;
+
+inline juce::Rectangle<float> rndFrame()
+{
+    return { rndFrameL, rndFrameTop, rndFrameR - rndFrameL, rndFrameBot - rndFrameTop };
+}
+
+inline juce::Rectangle<float> rndTrigRect (int i)
+{
+    return { rndTrigX0 + rndTrigStep * (float) i, rndRow - rndTrigH * 0.5f, rndTrigW, rndTrigH };
+}
+
+/** Every control's arm box: a small square on its upper-left shoulder,
+    opposite where a trim hangs off the upper right — set far enough out to
+    clear the value text above the dial. */
+constexpr float armSize = 9.0f;
+
+inline juce::Point<float> armAt (float cx, float cy, float r)
+{
+    const float d = r + 14.0f;
+    return { cx - 0.866f * d, cy - 0.5f * d };
+}
+
 /* ── Type ────────────────────────────────────────────────────────────────── */
 juce::Font mono (float h, bool bold = false);
 
@@ -214,6 +245,16 @@ void trim (juce::Graphics&, float cx, float cy, float r, float norm,
 
 void latch (juce::Graphics&, juce::Rectangle<float>, bool on, juce::Colour,
             const juce::String& label, float size = 8.0f);
+
+/** The box that arms a control for the randomiser: outlined when off,
+    filled when the control is armed. Always violet — arming is a
+    modulation decision, and violet is what modulation always draws in. */
+void armBox (juce::Graphics&, float cx, float cy, float r, bool armed);
+
+/** What the randomiser is doing to an armed control right now: the span
+    between the value it was set to and where this roll landed, with a tick
+    at the far end. The knob's own pointer still shows the set value. */
+void ghost (juce::Graphics&, float cx, float cy, float r, float norm, float rnd);
 
 void meter (juce::Graphics&, juce::Rectangle<float>, float value, juce::Colour);
 

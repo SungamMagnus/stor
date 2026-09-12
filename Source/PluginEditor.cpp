@@ -5,48 +5,9 @@ using namespace str::panel;
 
 namespace
 {
-/* Knob table, in build order — which is the order the signal runs: the pitch
-   both engines read, then the subtractive engine, then the FM one, then
-   everything the two of them are summed into. */
-enum Kn
-{
-    kTune = 0, kBend, kFall, kVel,
-
-    kLvlSine, kLvlTri, kLvlSaw, kLvlFold,
-    kFold, kFoldEnv, kCutoff, kReso, kFiltEnv,
-    kSubA, kSubD, kSubS, kSubR, kSubLevel,
-
-    kRatio1, kRatio2, kIndex, kIndexEnv, kXfm,
-    kFmA, kFmD, kFmS, kFmR, kFmLevel,
-
-    kModA, kModD, kModS, kModR,
-    kDrive, kHiss, kCabMix,
-    kRoomSize, kRoomDamp, kRoomMix,
-    kLoCut,
-    kB1F, kB1G, kB1Q, kB2F, kB2G, kB2Q, kB3F, kB3G, kB3Q,
-    kHiCut, kOutLevel,
-    kNumKnobs
-};
-
-const juce::String* kKnobId[kNumKnobs] = {
-    &pid::tune, &pid::bend, &pid::fall, &pid::vel,
-
-    &pid::lvlSine, &pid::lvlTri, &pid::lvlSaw, &pid::lvlFold,
-    &pid::fold, &pid::foldEnv, &pid::cutoff, &pid::reso, &pid::filtEnv,
-    &pid::subA, &pid::subD, &pid::subS, &pid::subR, &pid::subLevel,
-
-    &pid::opRatio[0], &pid::opRatio[1], &pid::index, &pid::indexEnv, &pid::xfm,
-    &pid::fmA, &pid::fmD, &pid::fmS, &pid::fmR, &pid::fmLevel,
-
-    &pid::modA, &pid::modD, &pid::modS, &pid::modR,
-    &pid::drive, &pid::hiss, &pid::cabMix,
-    &pid::roomSize, &pid::roomDamp, &pid::roomMix,
-    &pid::loCut,
-    &pid::bellFreq[0], &pid::bellGain[0], &pid::bellQ[0],
-    &pid::bellFreq[1], &pid::bellGain[1], &pid::bellQ[1],
-    &pid::bellFreq[2], &pid::bellGain[2], &pid::bellQ[2],
-    &pid::hiCut, &pid::outLevel
-};
+/* The two extra knobs the randomiser panel owns. Not str::Kn, and not
+   armable — arming the thing that does the arming is not a thing. */
+enum { kRndStrength = kNumKnobs, kRndRate, kEditorNumKnobs };
 
 /** Where a knob sits and how it is drawn. Trims are not in here — they hang
     off their parent, and the parent draws them. */
@@ -168,28 +129,33 @@ StorEditor::~StorEditor() = default;
 
 void StorEditor::buildControls()
 {
-    knobs.resize (kNumKnobs);
+    knobs.resize (kEditorNumKnobs);
 
-    auto place = [this] (int k, juce::Rectangle<float> hit, float travel = 100.0f)
+    auto place = [this] (int k, const juce::String& id, juce::Rectangle<float> hit, float travel = 100.0f)
     {
         auto& kn = knobs[(std::size_t) k];
-        kn.param = proc.apvts.getParameter (*kKnobId[k]);
+        kn.param = proc.apvts.getParameter (id);
         kn.hit = hit;
         kn.travel = travel;
         jassert (kn.param != nullptr);
     };
 
-    for (const auto& c : kPitch) place (c.knob, box (c.cx, c.cy, c.r));
-    for (const auto& c : kSub)   place (c.knob, box (c.cx, c.cy, c.r));
-    for (const auto& c : kFm)    place (c.knob, box (c.cx, c.cy, c.r));
-    for (const auto& c : kMod)   place (c.knob, box (c.cx, c.cy, c.r));
-    for (const auto& c : kChain) place (c.knob, box (c.cx, c.cy, c.r));
+    for (const auto& c : kPitch) place (c.knob, *knobIds[c.knob], box (c.cx, c.cy, c.r));
+    for (const auto& c : kSub)   place (c.knob, *knobIds[c.knob], box (c.cx, c.cy, c.r));
+    for (const auto& c : kFm)    place (c.knob, *knobIds[c.knob], box (c.cx, c.cy, c.r));
+    for (const auto& c : kMod)   place (c.knob, *knobIds[c.knob], box (c.cx, c.cy, c.r));
+    for (const auto& c : kChain) place (c.knob, *knobIds[c.knob], box (c.cx, c.cy, c.r));
 
     for (const auto& t : kTrims)
     {
         const auto at = trimAt (t.cx, t.cy, t.r);
-        place (t.knob, box (at.x, at.y, rTrim), 90.0f);
+        place (t.knob, *knobIds[t.knob], box (at.x, at.y, rTrim), 90.0f);
     }
+
+    /* The randomiser's own two knobs — not part of str::Kn, so they need
+       their ids given directly rather than looked up in knobIds. */
+    place (kRndStrength, pid::rndStrength, box (rndStrengthX, rndRow, rBig));
+    place (kRndRate, pid::rndRate, box (rndRateX, rndRow, rMix));
 
     /* Every enum value has to have come through place() above — a knob left
        at its default-constructed null param is a fast, silent crash the
@@ -198,6 +164,19 @@ void StorEditor::buildControls()
     {
         juce::ignoreUnused (kn);
         jassert (kn.param != nullptr);
+    }
+
+    /* Every armable control gets a box on its shoulder, positioned off where
+       it already landed rather than re-deriving cx/cy/r from the cell
+       tables above. Only the real str::Kn knobs are armable — not the two
+       the randomiser owns for itself. */
+    arms.reserve ((std::size_t) kNumKnobs);
+    for (int i = 0; i < kNumKnobs; ++i)
+    {
+        const auto c = knobs[(std::size_t) i].hit.getCentre();
+        const float r = knobs[(std::size_t) i].hit.getWidth() / 2.3f;
+        const auto a = armAt (c.x, c.y, r);
+        arms.push_back ({ i, juce::Rectangle<float> (16.0f, 16.0f).withCentre (a) });
     }
 
     auto addRadio = [this] (const juce::String& id, int index, juce::Rectangle<float> hit)
@@ -320,6 +299,15 @@ void StorEditor::select (const Radio& r)
     repaint();
 }
 
+void StorEditor::setRandomSync (bool sync)
+{
+    auto* p = proc.apvts.getParameter (pid::rndSync);
+    p->beginChangeGesture();
+    p->setValueNotifyingHost (sync ? 1.0f : 0.0f);
+    p->endChangeGesture();
+    repaint();
+}
+
 void StorEditor::mouseDown (const juce::MouseEvent& e)
 {
     const auto d = toDesign (e.position);
@@ -327,6 +315,17 @@ void StorEditor::mouseDown (const juce::MouseEvent& e)
     for (const auto& r : radios)
         if (r.hit.contains (d))
             return select (r);
+
+    if (rndTrigRect (0).contains (d)) return setRandomSync (false);
+    if (rndTrigRect (1).contains (d)) return setRandomSync (true);
+
+    for (const auto& a : arms)
+        if (a.hit.contains (d))
+        {
+            proc.random.setArmed (a.knob, ! proc.random.isArmed (a.knob));
+            repaint();
+            return;
+        }
 
     for (const auto& l : latches)
         if (l.hit.contains (d))
@@ -412,9 +411,28 @@ void StorEditor::paint (juce::Graphics& g)
     paintFm (g);
     paintMod (g);
     paintChain (g);
+    paintRandom (g);
 
-    tracked (g, juce::CharPointer_UTF8 ("STÓR"), { 990.0f, 1058.0f, 220.0f, 22.0f }, 16.0f, ink (0.55f), 5.0f, false);
-    text (g, "KICK SYNTHESISER", { 990.0f, 1082.0f, 220.0f, 12.0f }, 7.5f, ink (0.38f));
+    /* Every armable control's box, and — for the ones currently armed — the
+       span the randomiser is riding it through. Drawn last, over everything,
+       the same reason a knob is drawn standing on the traces beneath it. */
+    for (int i = 0; i < kNumKnobs; ++i)
+    {
+        const auto c = knobs[(std::size_t) i].hit.getCentre();
+        const float r = knobs[(std::size_t) i].hit.getWidth() / 2.3f;
+        const bool on = proc.random.isArmed (i);
+
+        armBox (g, c.x, c.y, r, on);
+        if (on)
+        {
+            const float n = knobs[(std::size_t) i].param->getValue();
+            const float rnd = juce::jlimit (0.0f, 1.0f, n + proc.random.offsetFor (i));
+            ghost (g, c.x, c.y, r, n, rnd);
+        }
+    }
+
+    tracked (g, juce::CharPointer_UTF8 ("STÓR"), { 990.0f, 1148.0f, 220.0f, 22.0f }, 16.0f, ink (0.55f), 5.0f, false);
+    text (g, "KICK SYNTHESISER", { 990.0f, 1172.0f, 220.0f, 12.0f }, 7.5f, ink (0.38f));
 }
 
 void StorEditor::paintPitch (juce::Graphics& g)
@@ -613,4 +631,42 @@ void StorEditor::paintChain (juce::Graphics& g)
 
     terminal (g, outX, fxRow2, "OUT");
     segMeter (g, outX, outMeterTop, state.outLevel.load (std::memory_order_relaxed), hue::steel);
+}
+
+void StorEditor::paintRandom (juce::Graphics& g)
+{
+    frame (g, rndFrame(), hue::violet, "RANDOM");
+
+    knobCell (g, rndStrengthX, rndRow, rBig, norm (kRndStrength), hue::violet,
+              "STRENGTH", percentReadout (value (kRndStrength)));
+
+    const bool sync = proc.apvts.getRawParameterValue (pid::rndSync)->load() > 0.5f;
+
+    text (g, "TRIGGER", { rndTrigRect (0).getX(), rndRow - 38.0f, 150.0f, 12.0f }, 8.0f,
+          ink (0.62f), juce::Justification::left, true, true);
+    latch (g, rndTrigRect (0), ! sync, hue::violet, "HIT");
+    latch (g, rndTrigRect (1), sync, hue::violet, "SYNC");
+    text (g, "EVERY MIDI NOTE", { rndTrigRect (0).getX() - 14.0f, rndRow + 16.0f, 98.0f, 11.0f },
+          7.0f, ink (sync ? 0.28f : 0.55f), juce::Justification::centred, true, true);
+    text (g, "HOST GRID", { rndTrigRect (1).getX() - 14.0f, rndRow + 16.0f, 98.0f, 11.0f },
+          7.0f, ink (sync ? 0.55f : 0.28f), juce::Justification::centred, true, true);
+
+    const int rateIdx = juce::jlimit (0, numRndRates - 1,
+                                      juce::roundToInt (norm (kRndRate) * (float) (numRndRates - 1)));
+    knobCell (g, rndRateX, rndRow, rMix, norm (kRndRate),
+              sync ? hue::violet : hue::violet.withAlpha (0.28f), "RATE", rndRateNames[rateIdx]);
+
+    lamp (g, rndLampX, rndRow, rollFlashTicks > 0, hue::violet);
+    text (g, "ROLL", { rndLampX - 45.0f, rndRow - 22.0f, 90.0f, 11.0f }, 7.0f, ink (0.5f),
+          juce::Justification::centred, true, true);
+
+    int armed = 0;
+    for (int i = 0; i < kNumKnobs; ++i)
+        if (proc.random.isArmed (i))
+            ++armed;
+
+    text (g, "DRIVES  " + juce::String (armed) + " ARMED CONTROL" + (armed == 1 ? "" : "S")
+             + juce::String (juce::CharPointer_UTF8 (" \xc2\xb7 ONE GENERATOR EACH")),
+          { rndFrameL + 20.0f, rndCaptionY, 420.0f, 12.0f }, 7.5f,
+          hue::violet.withAlpha (0.75f), juce::Justification::left, true, true);
 }

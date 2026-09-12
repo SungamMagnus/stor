@@ -74,9 +74,50 @@ extern const juce::String bellQ[numBells];
 /* ── Output ──────────────────────────────────────────────────────────── */
 extern const juce::String outLevel;
 extern const juce::String limiter;
+
+/* ── Random ──────────────────────────────────────────────────────────────
+ * One global depth and one shared trigger; which controls it reaches is
+ * decided per-control on the panel, not by a parameter here. */
+extern const juce::String rndStrength;
+extern const juce::String rndSync;      // false: every MIDI hit. true: the host grid.
+extern const juce::String rndRate;      // only read when rndSync is on
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
+
+/** Every continuous control, in panel order — the one list the editor, the
+    processor's parameter gather, and the randomiser all share, so a knob
+    added to the panel only has to be added here. */
+enum Kn
+{
+    kTune = 0, kBend, kFall, kVel,
+
+    kLvlSine, kLvlTri, kLvlSaw, kLvlFold,
+    kFold, kFoldEnv, kCutoff, kReso, kFiltEnv,
+    kSubA, kSubD, kSubS, kSubR, kSubLevel,
+
+    kRatio1, kRatio2, kIndex, kIndexEnv, kXfm,
+    kFmA, kFmD, kFmS, kFmR, kFmLevel,
+
+    kModA, kModD, kModS, kModR,
+    kDrive, kHiss, kCabMix,
+    kRoomSize, kRoomDamp, kRoomMix,
+    kLoCut,
+    kB1F, kB1G, kB1Q, kB2F, kB2G, kB2Q, kB3F, kB3G, kB3Q,
+    kHiCut, kOutLevel,
+    kNumKnobs
+};
+
+/** kKn's parameter id, in the same order — a pointer table so the enum and
+    the id it names can never drift apart. */
+extern const juce::String* const knobIds[kNumKnobs];
+
+/* ── Random rates ────────────────────────────────────────────────────────
+ * Quarter notes per tick, in panel order — a triplet is two-thirds of the
+ * plain division either side of it, not a separate unrelated number. */
+static constexpr int numRndRates = 9;
+extern const char* const rndRateNames[numRndRates];
+extern const float rndRateBeats[numRndRates];
 
 /* ── Engineering units ───────────────────────────────────────────────────
  * Knobs carry Hz, dB and milliseconds; the engine wants gains, ratios and

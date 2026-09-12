@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -28,7 +29,14 @@ public:
     void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 
 private:
-    void timerCallback() override { repaint(); }
+    void timerCallback() override
+    {
+        const auto seq = proc.random.rollSeq();
+        if (seq != lastRollSeq) { lastRollSeq = seq; rollFlashTicks = 4; }
+        else if (rollFlashTicks > 0) --rollFlashTicks;
+
+        repaint();
+    }
 
     /** A continuous control. */
     struct Knob
@@ -54,9 +62,19 @@ private:
         juce::Rectangle<float> hit;
     };
 
+    /** The little box that arms a control for the randomiser. `knob` indexes
+        the same knobs vector a Knob does — arming is a property of a
+        control that already exists, not a control of its own. */
+    struct Arm
+    {
+        int knob = 0;
+        juce::Rectangle<float> hit;
+    };
+
     void buildControls();
     void toggle (const Latch&);
     void select (const Radio&);
+    void setRandomSync (bool sync);
 
     float scale() const;
     juce::Point<float> toDesign (juce::Point<float> px) const;
@@ -76,15 +94,23 @@ private:
     void paintFm (juce::Graphics&);
     void paintMod (juce::Graphics&);
     void paintChain (juce::Graphics&);
+    void paintRandom (juce::Graphics&);
 
     StorProcessor& proc;
     std::vector<Knob>  knobs;
     std::vector<Latch> latches;
     std::vector<Radio> radios;
+    std::vector<Arm>   arms;
 
     int   dragIdx = -1;
     float dragStartNorm = 0.0f;
     juce::Point<float> dragStart;
+
+    /* The roll lamp flashes off proc.random's sequence number rather than a
+       timer of its own, so it lights up on a synced tick as reliably as on a
+       MIDI hit. */
+    std::uint32_t lastRollSeq = 0;
+    int rollFlashTicks = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (StorEditor)
 };

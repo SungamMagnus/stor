@@ -20,65 +20,21 @@ StorProcessor::StorProcessor()
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
       apvts (*this, nullptr, "state", createLayout())
 {
-    tune_ = fetch<juce::AudioParameterFloat> (apvts, pid::tune);
-    bend_ = fetch<juce::AudioParameterFloat> (apvts, pid::bend);
-    fall_ = fetch<juce::AudioParameterFloat> (apvts, pid::fall);
-    vel_  = fetch<juce::AudioParameterFloat> (apvts, pid::vel);
-
-    const juce::String* lvlIds[4] = { &pid::lvlSine, &pid::lvlTri, &pid::lvlSaw, &pid::lvlFold };
-    for (int i = 0; i < 4; ++i)
-        lvl_[(std::size_t) i] = fetch<juce::AudioParameterFloat> (apvts, *lvlIds[i]);
-
-    fold_     = fetch<juce::AudioParameterFloat> (apvts, pid::fold);
-    foldEnv_  = fetch<juce::AudioParameterFloat> (apvts, pid::foldEnv);
-    cutoff_   = fetch<juce::AudioParameterFloat> (apvts, pid::cutoff);
-    reso_     = fetch<juce::AudioParameterFloat> (apvts, pid::reso);
-    filtEnv_  = fetch<juce::AudioParameterFloat> (apvts, pid::filtEnv);
-    subA_     = fetch<juce::AudioParameterFloat> (apvts, pid::subA);
-    subD_     = fetch<juce::AudioParameterFloat> (apvts, pid::subD);
-    subS_     = fetch<juce::AudioParameterFloat> (apvts, pid::subS);
-    subR_     = fetch<juce::AudioParameterFloat> (apvts, pid::subR);
-    subLevel_ = fetch<juce::AudioParameterFloat> (apvts, pid::subLevel);
+    for (int i = 0; i < kNumKnobs; ++i)
+    {
+        knobParams_[(std::size_t) i] = apvts.getParameter (*knobIds[i]);
+        jassert (knobParams_[(std::size_t) i] != nullptr);
+    }
 
     for (int o = 0; o < numOps; ++o)
-    {
-        opWave_[(std::size_t) o]  = fetch<juce::AudioParameterChoice> (apvts, pid::opWave[o]);
-        opRatio_[(std::size_t) o] = fetch<juce::AudioParameterFloat> (apvts, pid::opRatio[o]);
-    }
-    index_    = fetch<juce::AudioParameterFloat> (apvts, pid::index);
-    indexEnv_ = fetch<juce::AudioParameterFloat> (apvts, pid::indexEnv);
-    xfm_      = fetch<juce::AudioParameterFloat> (apvts, pid::xfm);
-    fmA_      = fetch<juce::AudioParameterFloat> (apvts, pid::fmA);
-    fmD_      = fetch<juce::AudioParameterFloat> (apvts, pid::fmD);
-    fmS_      = fetch<juce::AudioParameterFloat> (apvts, pid::fmS);
-    fmR_      = fetch<juce::AudioParameterFloat> (apvts, pid::fmR);
-    fmLevel_  = fetch<juce::AudioParameterFloat> (apvts, pid::fmLevel);
+        opWave_[(std::size_t) o] = fetch<juce::AudioParameterChoice> (apvts, pid::opWave[o]);
 
-    modA_ = fetch<juce::AudioParameterFloat> (apvts, pid::modA);
-    modD_ = fetch<juce::AudioParameterFloat> (apvts, pid::modD);
-    modS_ = fetch<juce::AudioParameterFloat> (apvts, pid::modS);
-    modR_ = fetch<juce::AudioParameterFloat> (apvts, pid::modR);
-
-    drive_  = fetch<juce::AudioParameterFloat> (apvts, pid::drive);
-    hiss_   = fetch<juce::AudioParameterFloat> (apvts, pid::hiss);
-    cab_    = fetch<juce::AudioParameterChoice> (apvts, pid::cab);
-    cabMix_ = fetch<juce::AudioParameterFloat> (apvts, pid::cabMix);
-
-    roomSize_ = fetch<juce::AudioParameterFloat> (apvts, pid::roomSize);
-    roomDamp_ = fetch<juce::AudioParameterFloat> (apvts, pid::roomDamp);
-    roomMix_  = fetch<juce::AudioParameterFloat> (apvts, pid::roomMix);
-
-    loCut_ = fetch<juce::AudioParameterFloat> (apvts, pid::loCut);
-    hiCut_ = fetch<juce::AudioParameterFloat> (apvts, pid::hiCut);
-    for (int b = 0; b < numBells; ++b)
-    {
-        bellF_[(std::size_t) b] = fetch<juce::AudioParameterFloat> (apvts, pid::bellFreq[b]);
-        bellG_[(std::size_t) b] = fetch<juce::AudioParameterFloat> (apvts, pid::bellGain[b]);
-        bellQ_[(std::size_t) b] = fetch<juce::AudioParameterFloat> (apvts, pid::bellQ[b]);
-    }
-
-    outLevel_  = fetch<juce::AudioParameterFloat> (apvts, pid::outLevel);
+    cab_       = fetch<juce::AudioParameterChoice> (apvts, pid::cab);
     limiterOn_ = fetch<juce::AudioParameterBool> (apvts, pid::limiter);
+
+    rndStrength_ = fetch<juce::AudioParameterFloat> (apvts, pid::rndStrength);
+    rndSync_     = fetch<juce::AudioParameterBool> (apvts, pid::rndSync);
+    rndRate_     = fetch<juce::AudioParameterChoice> (apvts, pid::rndRate);
 }
 
 bool StorProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -103,61 +59,69 @@ void StorProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     setLatencySamples (str::StorEngine::latencySamples());
 }
 
+float StorProcessor::randomised (int knobIndex) const
+{
+    auto* pr = knobParams_[(std::size_t) knobIndex];
+    const float n = juce::jlimit (0.0f, 1.0f, pr->getValue() + random.offsetFor (knobIndex));
+    return pr->convertFrom0to1 (n);
+}
+
 str::EngineParams StorProcessor::gather() const
 {
     EngineParams p;
 
-    p.tuneHz    = tune_->get();
-    p.bendSemis = bend_->get();
-    p.fallMs    = fall_->get();
-    p.velAmount = vel_->get();
+    p.tuneHz    = randomised (kTune);
+    p.bendSemis = randomised (kBend);
+    p.fallMs    = randomised (kFall);
+    p.velAmount = randomised (kVel);
 
-    for (int i = 0; i < 4; ++i)
-        p.lvl[(std::size_t) i] = lvl_[(std::size_t) i]->get();
+    p.lvl[0] = randomised (kLvlSine);
+    p.lvl[1] = randomised (kLvlTri);
+    p.lvl[2] = randomised (kLvlSaw);
+    p.lvl[3] = randomised (kLvlFold);
 
-    p.fold        = fold_->get();
-    p.foldEnv     = foldEnv_->get();
-    p.cutoffHz    = cutoff_->get();
-    p.resoQ       = resonanceQ (reso_->get());
-    p.filtOctaves = filterOctaves (filtEnv_->get());
-    p.subA = subA_->get(); p.subD = subD_->get();
-    p.subS = subS_->get(); p.subR = subR_->get();
-    p.subGain = levelGain (subLevel_->get());
+    p.fold        = randomised (kFold);
+    p.foldEnv     = randomised (kFoldEnv);
+    p.cutoffHz    = randomised (kCutoff);
+    p.resoQ       = resonanceQ (randomised (kReso));
+    p.filtOctaves = filterOctaves (randomised (kFiltEnv));
+    p.subA = randomised (kSubA); p.subD = randomised (kSubD);
+    p.subS = randomised (kSubS); p.subR = randomised (kSubR);
+    p.subGain = levelGain (randomised (kSubLevel));
 
     for (int o = 0; o < numOps; ++o)
-    {
-        p.wave[(std::size_t) o]  = (OpWave) opWave_[(std::size_t) o]->getIndex();
-        p.ratio[(std::size_t) o] = opRatio_[(std::size_t) o]->get();
-    }
-    p.index    = index_->get();
-    p.indexEnv = indexEnv_->get();
-    p.xfm      = xfm_->get();
-    p.fmA = fmA_->get(); p.fmD = fmD_->get();
-    p.fmS = fmS_->get(); p.fmR = fmR_->get();
-    p.fmGain = levelGain (fmLevel_->get());
+        p.wave[(std::size_t) o] = (OpWave) opWave_[(std::size_t) o]->getIndex();
+    p.ratio[0] = randomised (kRatio1);
+    p.ratio[1] = randomised (kRatio2);
+    p.index    = randomised (kIndex);
+    p.indexEnv = randomised (kIndexEnv);
+    p.xfm      = randomised (kXfm);
+    p.fmA = randomised (kFmA); p.fmD = randomised (kFmD);
+    p.fmS = randomised (kFmS); p.fmR = randomised (kFmR);
+    p.fmGain = levelGain (randomised (kFmLevel));
 
-    p.modA = modA_->get(); p.modD = modD_->get();
-    p.modS = modS_->get(); p.modR = modR_->get();
+    p.modA = randomised (kModA); p.modD = randomised (kModD);
+    p.modS = randomised (kModS); p.modR = randomised (kModR);
 
-    p.drive  = drive_->get();
-    p.hiss   = hiss_->get();
+    p.drive  = randomised (kDrive);
+    p.hiss   = randomised (kHiss);
     p.cab    = (Cab) cab_->getIndex();
-    p.cabMix = cabMix_->get();
+    p.cabMix = randomised (kCabMix);
 
-    p.roomSize = roomSize_->get();
-    p.roomDamp = roomDamp_->get();
-    p.roomMix  = roomMix_->get();
+    p.roomSize = randomised (kRoomSize);
+    p.roomDamp = randomised (kRoomDamp);
+    p.roomMix  = randomised (kRoomMix);
 
-    p.loCutHz = loCut_->get();
-    p.hiCutHz = hiCut_->get();
+    p.loCutHz = randomised (kLoCut);
+    p.hiCutHz = randomised (kHiCut);
     for (int b = 0; b < numBells; ++b)
     {
-        p.bellF[(std::size_t) b] = bellF_[(std::size_t) b]->get();
-        p.bellG[(std::size_t) b] = bellG_[(std::size_t) b]->get();
-        p.bellQ[(std::size_t) b] = bellQ_[(std::size_t) b]->get();
+        p.bellF[(std::size_t) b] = randomised (kB1F + 3 * b);
+        p.bellG[(std::size_t) b] = randomised (kB1G + 3 * b);
+        p.bellQ[(std::size_t) b] = randomised (kB1Q + 3 * b);
     }
 
-    p.outGain = juce::Decibels::decibelsToGain (outLevel_->get());
+    p.outGain = juce::Decibels::decibelsToGain (randomised (kOutLevel));
 
     return p;
 }
@@ -189,12 +153,66 @@ void StorProcessor::renderSegment (juce::AudioBuffer<float>& buffer, int start, 
     }
 }
 
+void StorProcessor::updateRandomSync (int numSamples)
+{
+    bool playing = false;
+    double bpm = 120.0;
+
+    if (auto* ph = getPlayHead())
+        if (auto pos = ph->getPosition())
+        {
+            playing = pos->getIsPlaying();
+            bpm = pos->getBpm().orFallback (120.0);
+        }
+
+    if (! playing)
+    {
+        rndWasPlaying_ = false;
+        return;
+    }
+
+    const int rateIdx = juce::jlimit (0, numRndRates - 1, rndRate_->getIndex());
+    const double samplesPerTick = juce::jmax (1.0, (double) rndRateBeats[rateIdx]
+                                                   * (60.0 / juce::jmax (1.0, bpm)) * getSampleRate());
+
+    if (! rndWasPlaying_)
+    {
+        rndWasPlaying_ = true;
+        rndTickAccum_ = samplesPerTick;   // fire once, right as playback starts
+    }
+
+    rndTickAccum_ += (double) numSamples;
+    while (rndTickAccum_ >= samplesPerTick)
+    {
+        rndTickAccum_ -= samplesPerTick;
+        random.roll (rndStrength_->get());
+    }
+}
+
 void StorProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
     juce::ScopedNoDenormals noDenormals;
 
     const int numSamples = buffer.getNumSamples();
     buffer.clear();
+
+    /* Rolled ahead of gather(), so a hit that lands in this block already
+       renders with the offsets it triggered rather than the previous
+       block's — the same reason params are only ever refreshed once per
+       block regardless of how many notes fall in it. */
+    if (rndSync_->get())
+    {
+        updateRandomSync (numSamples);
+    }
+    else
+    {
+        for (const auto meta : midi)
+            if (meta.getMessage().isNoteOn())
+            {
+                random.roll (rndStrength_->get());
+                break;
+            }
+    }
 
     engine_.setParams (gather());
 
@@ -254,15 +272,34 @@ juce::AudioProcessorEditor* StorProcessor::createEditor()
 
 void StorProcessor::getStateInformation (juce::MemoryBlock& dest)
 {
-    if (auto xml = apvts.copyState().createXml())
-        copyXmlToBinary (*xml, dest);
+    auto xml = apvts.copyState().createXml();
+    if (xml == nullptr)
+        return;
+
+    /* Which controls the randomiser reaches is not a value a host needs to
+       automate, so it is not one of apvts's parameters — it rides along in
+       the same state block as a plain bit string instead. */
+    juce::String bits;
+    for (int i = 0; i < kNumKnobs; ++i)
+        bits << (random.isArmed (i) ? '1' : '0');
+    xml->createNewChildElement ("RANDOM_ARM")->setAttribute ("bits", bits);
+
+    copyXmlToBinary (*xml, dest);
 }
 
 void StorProcessor::setStateInformation (const void* data, int size)
 {
-    if (auto xml = getXmlFromBinary (data, size))
-        if (xml->hasTagName (apvts.state.getType()))
-            apvts.replaceState (juce::ValueTree::fromXml (*xml));
+    auto xml = getXmlFromBinary (data, size);
+    if (xml == nullptr || ! xml->hasTagName (apvts.state.getType()))
+        return;
+
+    apvts.replaceState (juce::ValueTree::fromXml (*xml));
+
+    const auto* arm = xml->getChildByName ("RANDOM_ARM");
+    const auto bits = arm != nullptr ? arm->getStringAttribute ("bits") : juce::String();
+
+    for (int i = 0; i < kNumKnobs; ++i)
+        random.setArmed (i, i < bits.length() && bits[i] == '1');
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

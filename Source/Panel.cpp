@@ -243,6 +243,38 @@ void trim (juce::Graphics& g, float cx, float cy, float r, float norm,
               source.withAlpha (0.85f), juce::Justification::centred, true, true);
 }
 
+void armBox (juce::Graphics& g, float cx, float cy, float r, bool armed)
+{
+    const auto p = armAt (cx, cy, r);
+    const juce::Rectangle<float> box (p.x - armSize * 0.5f, p.y - armSize * 0.5f, armSize, armSize);
+
+    if (armed)
+    {
+        g.setColour (hue::violet);
+        g.fillRect (box);
+    }
+    else
+    {
+        g.setColour (hue::paper);
+        g.fillRect (box);
+        g.setColour (hue::violet.withAlpha (0.38f));
+        g.drawRect (box, 1.0f);
+    }
+}
+
+void ghost (juce::Graphics& g, float cx, float cy, float r, float norm, float rnd)
+{
+    const float track = r + 4.5f;
+    const float w = r >= 24.0f ? 3.4f : (r >= 16.0f ? 2.8f : 2.2f);
+    arc (g, cx, cy, track, angleFor (norm), angleFor (rnd), hue::violet.withAlpha (0.75f), w);
+
+    const float a = angleFor (rnd);
+    const float px = std::sin (a), py = -std::cos (a);
+    g.setColour (hue::violet);
+    g.drawLine (cx + px * (r + 1.0f), cy + py * (r + 1.0f),
+                cx + px * (r + 9.0f), cy + py * (r + 9.0f), 1.6f);
+}
+
 void latch (juce::Graphics& g, juce::Rectangle<float> r, bool on, juce::Colour colour,
             const juce::String& label, float size)
 {

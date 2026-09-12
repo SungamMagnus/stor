@@ -7,6 +7,7 @@
 
 #include "Limiter.h"
 #include "Parameters.h"
+#include "Random.h"
 #include "StorEngine.h"
 
 /** Everything the panel animates, published from the audio thread. */
@@ -55,9 +56,19 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
     PanelState panel;
+    str::RandomEngine random;
 
 private:
     str::EngineParams gather() const;
+
+    /** A knob's engineering value with its randomiser offset folded in —
+        the value the engine actually gets; the parameter itself is
+        untouched, so automation and preset recall see only what was set. */
+    float randomised (int knobIndex) const;
+
+    /** Follows the host's tempo and transport, rolling the randomiser on the
+        chosen grid while pid::rndSync is on. */
+    void updateRandomSync (int numSamples);
 
     /** One stretch of samples between MIDI events. */
     void renderSegment (juce::AudioBuffer<float>&, int start, int count);
@@ -71,56 +82,24 @@ private:
 
     float outEnv_ = 0.0f, envCoeff_ = 0.01f;
 
-    juce::AudioParameterFloat* tune_ = nullptr;
-    juce::AudioParameterFloat* bend_ = nullptr;
-    juce::AudioParameterFloat* fall_ = nullptr;
-    juce::AudioParameterFloat* vel_  = nullptr;
-
-    std::array<juce::AudioParameterFloat*, 4> lvl_ {};
-    juce::AudioParameterFloat* fold_ = nullptr;
-    juce::AudioParameterFloat* foldEnv_ = nullptr;
-    juce::AudioParameterFloat* cutoff_ = nullptr;
-    juce::AudioParameterFloat* reso_ = nullptr;
-    juce::AudioParameterFloat* filtEnv_ = nullptr;
-    juce::AudioParameterFloat* subA_ = nullptr;
-    juce::AudioParameterFloat* subD_ = nullptr;
-    juce::AudioParameterFloat* subS_ = nullptr;
-    juce::AudioParameterFloat* subR_ = nullptr;
-    juce::AudioParameterFloat* subLevel_ = nullptr;
+    /* Every continuous control, fetched once in str::Kn order — gather()
+       reads through this rather than one member pointer per knob, which is
+       also what lets randomised() apply to any of them by index. */
+    std::array<juce::RangedAudioParameter*, str::kNumKnobs> knobParams_ {};
 
     std::array<juce::AudioParameterChoice*, str::numOps> opWave_ {};
-    std::array<juce::AudioParameterFloat*, str::numOps> opRatio_ {};
-    juce::AudioParameterFloat* index_ = nullptr;
-    juce::AudioParameterFloat* indexEnv_ = nullptr;
-    juce::AudioParameterFloat* xfm_ = nullptr;
-    juce::AudioParameterFloat* fmA_ = nullptr;
-    juce::AudioParameterFloat* fmD_ = nullptr;
-    juce::AudioParameterFloat* fmS_ = nullptr;
-    juce::AudioParameterFloat* fmR_ = nullptr;
-    juce::AudioParameterFloat* fmLevel_ = nullptr;
-
-    juce::AudioParameterFloat* modA_ = nullptr;
-    juce::AudioParameterFloat* modD_ = nullptr;
-    juce::AudioParameterFloat* modS_ = nullptr;
-    juce::AudioParameterFloat* modR_ = nullptr;
-
-    juce::AudioParameterFloat*  drive_ = nullptr;
-    juce::AudioParameterFloat*  hiss_ = nullptr;
     juce::AudioParameterChoice* cab_ = nullptr;
-    juce::AudioParameterFloat*  cabMix_ = nullptr;
-
-    juce::AudioParameterFloat* roomSize_ = nullptr;
-    juce::AudioParameterFloat* roomDamp_ = nullptr;
-    juce::AudioParameterFloat* roomMix_ = nullptr;
-
-    juce::AudioParameterFloat* loCut_ = nullptr;
-    juce::AudioParameterFloat* hiCut_ = nullptr;
-    std::array<juce::AudioParameterFloat*, str::numBells> bellF_ {};
-    std::array<juce::AudioParameterFloat*, str::numBells> bellG_ {};
-    std::array<juce::AudioParameterFloat*, str::numBells> bellQ_ {};
-
-    juce::AudioParameterFloat* outLevel_ = nullptr;
     juce::AudioParameterBool*  limiterOn_ = nullptr;
+
+    juce::AudioParameterFloat*  rndStrength_ = nullptr;
+    juce::AudioParameterBool*   rndSync_ = nullptr;
+    juce::AudioParameterChoice* rndRate_ = nullptr;
+
+    /* The randomiser's own tempo clock, in samples — a free-running counter
+       rather than a lock to the host's bar grid, reset when the transport
+       starts so the first tick lands on the downbeat of playback. */
+    double rndTickAccum_ = 0.0;
+    bool   rndWasPlaying_ = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (StorProcessor)
 };
